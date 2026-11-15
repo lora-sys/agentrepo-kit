@@ -1,18 +1,14 @@
 # AgentRepo Kit
 
-**A ready-to-use repository scaffold for coding agents.**
+A Node.js CLI that adds agent instructions, architecture visualization, verification commands, and replayable evals to repositories. New projects receive a complete template; existing projects retain their own rules.
 
-AgentRepo Kit provides a Node.js CLI that prepares new or existing repositories for code discovery, verified project documentation, architecture visualization, execution checks, handoffs, and replayable evaluations.
+Requires Node.js 20+. Current version: v0.8.1. MIT license. No third-party runtime dependencies. Not published to the npm Registry.
 
-It ships with written rules and clear `{{REQUIRES_REVIEW:...}}` placeholders. Derived code facts are computed; unknown business facts are not invented.
+[中文说明](README.md) · [Usage](docs/USAGE.zh-CN.md) · [Adoption](docs/ADOPTION.zh-CN.md) · [Architecture](docs/ARCHITECTURE.zh-CN.md) · [Evals](docs/EVAL.zh-CN.md)
 
-**Requirements:** Node.js 20+. Current version: `v0.8.1`. No third-party npm runtime dependencies are required by the core CLI.
+## Initialize
 
-[中文说明](README.md) · [Full guide](docs/USAGE.zh-CN.md) · [Architecture](docs/ARCHITECTURE.zh-CN.md) · [Eval guide](docs/EVAL.zh-CN.md)
-
-## Quick start
-
-From a local source checkout:
+From a source checkout:
 
 ```sh
 npm install --offline --ignore-scripts
@@ -21,26 +17,37 @@ agentrepo init ../my-project --dry-run
 agentrepo init ../my-project
 cd ../my-project
 node .agentrepo/cli.mjs doctor
-node .agentrepo/cli.mjs docs check
-node .agentrepo/cli.mjs eval run
+node .agentrepo/cli.mjs verify
 ```
 
-For JavaScript or TypeScript repositories, optionally add `dependency-cruiser`:
+Generated files include `AGENTS.md`, `docs/architecture.md`, `docs/architecture.html`, `docs/code-map.md`, `docs/development.md`, `eval/`, and `.agentrepo/cli.mjs`. Unknown project facts use `{{REQUIRES_REVIEW:...}}` placeholders.
+
+## Adopt an existing repository
 
 ```sh
-node .agentrepo/cli.mjs arch init
+agentrepo adopt scan
+agentrepo adopt plan --write
+agentrepo adopt apply --approve
+agentrepo adopt activate --approve --reason "Reviewed existing rules"
+agentrepo adopt verify
+```
+
+`init` adds missing files. `adopt` checks existing rules, installs the integration entry point after approval, and detects later changes. See the [adoption guide](docs/ADOPTION.zh-CN.md).
+
+## Architecture checks
+
+JavaScript and TypeScript projects can install [dependency-cruiser](https://github.com/sverweij/dependency-cruiser):
+
+```sh
 npm install --save-dev dependency-cruiser
+node .agentrepo/cli.mjs arch init
 node .agentrepo/cli.mjs arch check --strict
 node .agentrepo/cli.mjs arch view --write
 ```
 
-The HTML architecture view only draws dependency edges based on verified analyzer output. Initialization preserves existing project files, including custom HTML documentation.
+Dependency edges in the generated HTML come from analyzer output. Missing checks are reported as `SKIP`.
 
-## Evaluation boundaries
-
-The project includes deterministic tests, fault-injection regressions, a simulated fix-and-handoff workflow, and hooks for paired coding-agent experiments. The deterministic simulation **does not execute an LLM**. There are no verified autonomous task completion rates or model-token savings yet. Real dependency-cruiser binary integration and screenshot-based visual acceptance require further testing.
-
-## Development
+## Tests and evals
 
 ```sh
 npm test
@@ -49,24 +56,6 @@ npm run check
 npm pack --dry-run
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and [CHANGELOG.md](CHANGELOG.md).
+Deterministic evals cover CLI behavior. Autonomous task success and Token savings require paired agent runs with measured usage.
 
-Licensed under [MIT](LICENSE). Third-party benchmark repositories are not bundled.
-
-## GitHub collaboration templates
-
-Fresh repositories receive Issue forms, a PR checklist, an `Unreleased` changelog, and a minimal read-only workflow. Existing repositories keep their own templates, conventions and CI; new workflows require explicit `init --github-workflow`. Check with `agentrepo github check`.
-
-## Adopting an existing repository
-
-`init` only adds missing files. Use the formal adoption flow to identify existing instructions, preserve their authority, review and explicitly activate a minimal integration bridge, and detect later policy changes.
-
-```sh
-agentrepo adopt scan
-agentrepo adopt plan --write
-agentrepo adopt apply --approve
-agentrepo adopt activate --approve --reason "Reviewed the existing repository rules and approved the integration"
-agentrepo adopt verify
-```
-
-Existing project instructions have precedence. The readiness check is about repository integration, not proof of semantic understanding or a successful Coding Agent task. See [the detailed guide](docs/ADOPTION.zh-CN.md).
+[Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md) · [License](LICENSE)
