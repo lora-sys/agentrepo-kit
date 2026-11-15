@@ -60,6 +60,10 @@ node .agentrepo/cli.mjs map --check
 
 项目级 Eval、交互式 HTML 和额外 GitHub 模板不在默认安装范围。已有 `dependency-cruiser`、Lint 和测试可以纳入项目自己的 `verify` 命令；脚手架不会凭空生成架构依赖关系。
 
+## 项目 AGENTS.md 的维护边界
+
+自动生成的 `AGENTS.md` 只保留仓库级优先级与验证入口。项目维护者只补充无法从代码或配置推导、违反代价高的项目事实。复杂 Agent 流程放在项目 Skill 中，公共流程交给已安装的全局 Skill。使用 `lora-mode` 的项目可参考 [`templates/AGENTS.project.lora-mode.md`](templates/AGENTS.project.lora-mode.md)，此模板不会自动生成到目标仓库。
+
 ## 开发与测试
 
 ```sh
