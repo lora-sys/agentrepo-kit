@@ -1,81 +1,73 @@
 # AgentRepo Kit
 
-为代码库生成 Agent 规则、交互式架构图、验证命令和 Eval。新仓库使用完整模板，已有仓库保留原规则并补齐缺失能力。
+把代码库整理成 Coding Agent 能读懂、能运行、能验证的状态。
 
-Node.js 20+ · v0.9.0 · MIT。CLI 无第三方 npm 运行时依赖，尚未发布到 npm Registry。
+默认只做三件事：**可读、可跑、可验**。适用于新项目和已有项目。Node.js 20+，CLI 无第三方运行时依赖。
 
-[English](README.en.md) · [完整用法](docs/USAGE.zh-CN.md) · [接入已有仓库](docs/ADOPTION.zh-CN.md) · [架构](docs/ARCHITECTURE.zh-CN.md) · [Eval](docs/EVAL.zh-CN.md) · [架构 HTML 示例](examples/architecture-demo.html)
+## 使用
 
-## 最小模式
-
-执行 `agentrepo init ../my-project --minimal`，只安装 AGENTS、代码索引、开发说明、配置和 CLI 共 7 个文件。不生成架构 HTML、GitHub 模板或项目级 Eval 文件。完整模式保持 `agentrepo init`，已有文件不覆盖。
-
-## 初始化
-
-从源码安装 CLI：
+从仓库源码目录执行：
 
 ```sh
-npm install --offline --ignore-scripts
-npm link
-agentrepo init ../my-project --dry-run
-agentrepo init ../my-project
-cd ../my-project
-node .agentrepo/cli.mjs doctor
+node bin/agentrepo.mjs inspect /path/to/project
+node bin/agentrepo.mjs verify /path/to/project
+node bin/agentrepo.mjs init /path/to/project --dry-run
+node bin/agentrepo.mjs init /path/to/project
+```
+
+`inspect` 只读检查项目已有规则、语言和命令。`verify` 在初始化前就可以执行已发现的项目原生检查。`init` 只增加缺失文件，不执行安装脚本、不覆盖已有文档和 CI。
+
+进入目标项目后，可直接使用随项目复制的 CLI：
+
+```sh
+cd /path/to/project
+node .agentrepo/cli.mjs setup
+node .agentrepo/cli.mjs dev
+node .agentrepo/cli.mjs test
 node .agentrepo/cli.mjs verify
+node .agentrepo/cli.mjs map --check
 ```
 
-## 接入已有仓库
+没有配置的命令会返回 `NOT_CONFIGURED`；`verify` 缺失时按失败处理。命令的唯一配置来源是 `agentrepo.json.commands`。检测结果可以手动修改，使用 argv 数组，不需要 Shell 包装。
+
+## 接手已有项目
 
 ```sh
-cd /path/to/existing-project
-agentrepo adopt scan
-agentrepo adopt plan --write
-agentrepo adopt apply --approve
-agentrepo adopt activate --approve --reason "已审核原项目规则"
-agentrepo adopt verify
+node bin/agentrepo.mjs adopt /path/to/existing-project
+node bin/agentrepo.mjs adopt /path/to/existing-project --apply
 ```
 
-`init` 只补缺失文件；`adopt` 审核规则、启用接入入口并检查后续变更。操作步骤见 [接入指南](docs/ADOPTION.zh-CN.md)。
+第一条只读生成接入预览；第二条仅补缺失文件。已有 `AGENTS.md`、README、架构文档、Workflow 和业务代码一律保留。若已有 `AGENTS.md`，CLI 会提示人工检查是否需要增加开发命令入口。
 
-## 生成内容
+## 默认补齐内容
 
-| 文件 | 用途 |
+| 文件 | 内容 |
 | --- | --- |
-| `AGENTS.md` | Agent 开发规则 |
-| `docs/architecture.md` | 模块职责、设计依据和边界 |
-| `docs/architecture.html` | 真实依赖分析生成的离线架构图 |
-| `docs/development.md` | 开发与验收命令 |
-| `docs/code-map.md` | 源码索引 |
-| `.github/`、`CHANGELOG.md` | GitHub 协作与版本记录模板 |
-| `eval/`、`.agentrepo/` | 回归数据与项目内 CLI |
+| `AGENTS.md` | 简短项目入口、修改约束、运行命令 |
+| `docs/architecture.md` | 真实目录地图和待维护者确认的模块边界 |
+| `docs/development.md` | 环境、统一命令和通过条件 |
+| `agentrepo.json` | 已检测的可执行命令；未知命令为 `null` |
+| `.agentrepo/cli.mjs` | 可离线运行的自包含 CLI |
+| `.env.example` | 非敏感配置变量示例 |
+| `README.md`、`.gitignore` | 仅在不存在时生成 |
 
-未知业务信息保留 `{{REQUIRES_REVIEW:...}}` 占位符，`docs check --strict` 会检查是否填写。
-
-## 常用命令
+要更新源码目录地图：
 
 ```sh
-agentrepo github check
-agentrepo locate "task keywords" --k 3
-agentrepo docs check --strict
-agentrepo arch view --write
-agentrepo eval run
+node .agentrepo/cli.mjs map --write
+node .agentrepo/cli.mjs map --check
 ```
 
-JavaScript/TypeScript 项目可安装 [dependency-cruiser](https://github.com/sverweij/dependency-cruiser)，再运行 `agentrepo arch init` 和 `agentrepo arch check --strict`。仅有分析结果时才绘制模块依赖线；未运行的检查记为 `SKIP`。
-
-## 真实 Agent 对照实验
-
-使用 `npm run eval:agent:smoke` 检查 A/B/C 运行基建，模拟数据不会计入真实指标。真实运行前固定源码 commit、模型版本和独立验收脚本，见 [实验指南](benchmarks/agent-eval/README.md)。
+项目级 Eval、交互式 HTML 和额外 GitHub 模板不在默认安装范围。已有 `dependency-cruiser`、Lint 和测试可以纳入项目自己的 `verify` 命令；脚手架不会凭空生成架构依赖关系。
 
 ## 开发与测试
 
 ```sh
 npm test
-npm run eval:smoke
 npm run check
 npm pack --dry-run
 ```
 
-真实 Agent 成功率和 Token 减少率仍需配对实验验证。历史结果见 [reports/](reports/)。
+[English](README.en.md) · [架构与设计边界](docs/ARCHITECTURE.zh-CN.md) · [贡献](CONTRIBUTING.md) · [许可证](LICENSE)
 
-[贡献](CONTRIBUTING.md) · [更新记录](CHANGELOG.md) · [安全](SECURITY.md) · [发布](docs/PUBLISHING.zh-CN.md)
+旧版完整治理工具与 Eval 历史保存在 GitHub 的 `archive/pre-lean-v1` 分支，不属于当前 CLI 默认流程。

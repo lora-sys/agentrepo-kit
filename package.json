@@ -1,7 +1,7 @@
 {
   "name": "agentrepo-kit",
-  "version": "0.9.0",
-  "description": "Agent-ready repository CLI, verified docs, architecture checks and replayable evals",
+  "version": "1.0.0-rc.1",
+  "description": "Make a repository legible, executable, and verifiable for coding agents",
   "type": "module",
   "bin": {
     "agentrepo": "./bin/agentrepo.mjs"
@@ -11,45 +11,14 @@
   },
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "bench": "node benchmarks/run.mjs",
-    "replay": "node bin/agentrepo.mjs eval replay --json",
-    "check": "node --check bin/agentrepo.mjs && npm test",
-    "eval:smoke": "node benchmarks/smoke.mjs",
-    "eval:agent:smoke": "node benchmarks/agent-eval/cli.mjs smoke"
+    "check": "node --check bin/agentrepo.mjs && npm test"
   },
+  "license": "MIT",
   "files": [
     "bin",
-    "benchmarks",
-    "README.md",
-    "LICENSE",
     "docs",
-    "tests",
-    ".github",
+    "README.md",
     "README.en.md",
-    "CHANGELOG.md",
-    "CONTRIBUTING.md",
-    "SECURITY.md",
-    "CODE_OF_CONDUCT.md",
-    "AGENTS.md",
-    "examples",
-    "scripts"
-  ],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/lora-sys/agentrepo-kit.git"
-  },
-  "homepage": "https://github.com/lora-sys/agentrepo-kit#readme",
-  "bugs": {
-    "url": "https://github.com/lora-sys/agentrepo-kit/issues"
-  },
-  "keywords": [
-    "coding-agent",
-    "agent-friendly",
-    "repository-scaffold",
-    "cli",
-    "eval",
-    "architecture",
-    "documentation"
+    "LICENSE"
   ]
 }

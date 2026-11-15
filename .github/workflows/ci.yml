@@ -1,32 +1,25 @@
 name: CI
-
 on:
   push:
   pull_request:
-
 permissions:
   contents: read
-
 jobs:
   test:
-    name: Node ${{ matrix.node }}
-    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         node: ['20', '22']
+    runs-on: ubuntu-latest
+    name: Node ${{ matrix.node }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-      - name: Unit and integration tests
+      - name: Test
         run: npm test
-      - name: Deterministic Eval smoke
-        run: npm run eval:smoke
-      - name: Real-agent harness synthetic smoke (no model calls)
-        run: npm run eval:agent:smoke
-      - name: CLI syntax
-        run: node --check bin/agentrepo.mjs
-      - name: Package inspection
-        run: npm pack --dry-run --json > /tmp/agentrepo-package.json
+      - name: CLI and package
+        run: |
+          node --check bin/agentrepo.mjs
+          npm pack --dry-run
