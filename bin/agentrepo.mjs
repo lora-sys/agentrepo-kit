@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// AgentRepo Kit v0.8.0. Node.js CLI with bundled, dependency-free adoption module.
+// AgentRepo Kit v0.8.1. Node.js CLI with bundled, dependency-free adoption module.
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { adoptScan, adoptPlan, adoptApply, adoptActivate, adoptVerify, adoptReconcile } from './adoption.mjs';
 
-const VERSION = '0.8.0';
+const VERSION = '0.8.1';
 const IGNORE = new Set(['.git', '.agentrepo', 'node_modules', '.venv', 'venv', 'dist', 'build', 'coverage', '.next', '.cache', '.turbo', '__pycache__', 'vendor', '.npm', '.pnpm-store', 'target', '.pytest_cache']);
 const SOURCE_ROOTS = ['src', 'app', 'apps', 'lib', 'core', 'packages', 'services', 'tests', 'test', 'internal', 'cmd', 'bin', 'scripts', 'utils'];
 const SOURCE_EXT = new Set(['.js','.jsx','.mjs','.cjs','.ts','.tsx','.mts','.cts','.py','.go','.rs','.java','.kt','.rb','.sh','.bash','.zsh','.php','.cs','.swift','.c','.h','.cc','.cpp','.vue','.svelte','.html','.css','.scss','.json','.yaml','.yml']);
@@ -297,39 +297,31 @@ body:
 `;
     out['.github/ISSUE_TEMPLATE/config.yml']='blank_issues_enabled: true\n';
   }
-  if(!x.pr.length)out['.github/pull_request_template.md']=`## Purpose and related issue
+  if(!x.pr.length)out['.github/pull_request_template.md']=`## Change
 
-Explain why this change is needed. Link the issue if there is one.
+What changes, why, and related Issue if any?
 
-## Scope and compatibility
+## Compatibility
 
-List affected modules, public APIs and any migration steps.
+Affected APIs, migrations and project rules.
+
+- [ ] Existing project instructions and CI policies were preserved.
 
 ## Verification
 
-- [ ] Ran the relevant automated checks and included results
-- [ ] Added or updated regression tests for behavior changes
-- [ ] Checked documentation, architecture and changelog relevance
-- [ ] Existing project instructions and CI policies were preserved
+- [ ] Actual test commands and PASS, FAIL or SKIP; UI screenshots when relevant.
+- [ ] Regression coverage for behavior changes, or reason not applicable.
+- [ ] Docs, architecture and Changelog reviewed.
 
-## Evidence and limitations
+## Risks
 
-Give exact test commands and outcomes. Mark skipped or unrun checks explicitly. For UI changes, attach relevant screenshots where useful.
+Unrun checks and known limitations.
 `;
   if(!x.changelog.length)out['CHANGELOG.md']=`# Changelog
 
-Notable user-facing changes are recorded here using [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-Do not replace this file with a raw Git commit log. For an adopted project, do not invent past releases.
+Track user-visible changes in [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. Do not invent prior releases.
 
 ## [Unreleased]
-
-### Added
-
-### Changed
-
-### Fixed
-
-### Security
 `;
   return out;
 }
@@ -340,10 +332,75 @@ function template(root,opts={}) {
   const files={
     'README.md':`# ${path.basename(path.resolve(root))}\n\n## 项目目标\n\n{{REQUIRES_REVIEW:PROJECT_PURPOSE}}\n\n## 使用者\n\n{{REQUIRES_REVIEW:PRIMARY_USERS}}\n\n## 快速开始\n\n请先阅读 [开发与验证](docs/development.md)，安装、启动和测试命令以 agentrepo.json 中经过确认的配置为准。\n\n## 架构\n\n[架构说明](docs/architecture.md) · [可交互架构图](docs/architecture.html)\n\n## Agent 工作方式\n\n阅读 AGENTS.md，然后执行 \`node .agentrepo/cli.mjs doctor\`。\n`,
     'agentrepo.json':json(cfg),
-    'AGENTS.md':`# Agent instructions\n\nRead \`README.md\` for product purpose and \`docs/architecture.md\` for module boundaries.\nUse \`docs/code-map.md\` only for a quick index; locate source with \`node .agentrepo/cli.mjs locate "keywords"\`.\nCheck \`docs/development.md\` for commands. Consult decisions and task plans only when relevant.\n\n## Execution\n\n- Existing repository instructions and GitHub workflows, Issue/PR templates and changelog take precedence. Inspect with \`node .agentrepo/cli.mjs github check\`.\n- Inspect affected implementation, contracts, and tests before editing.\n- Avoid unrelated changes and preserve public APIs unless the task requires otherwise.\n- Run \`node .agentrepo/cli.mjs verify\`; report failed or skipped checks accurately.\n- Run \`node .agentrepo/cli.mjs docs check\` when source paths or interfaces change.\n- Architecture text is in \`docs/architecture.md\`; inspect interactive verified dependencies in \`docs/architecture.html\` or refresh using \`node .agentrepo/cli.mjs arch view --write\`. Never invent graph edges.\n- For JS/TS repositories initialize and run dependency-cruiser via \`node .agentrepo/cli.mjs arch init\` then \`arch check --strict\`.\n- For long tasks, maintain a specific plan in \`docs/plans/\` with remaining work and observed results.\n- Use isolated worktrees and disposable test data for concurrent or risky work.\n- Do not commit credentials or modify production systems without approval.\n`,
-    'docs/architecture.md':`# 架构说明\n\n## 项目目标\n\n本项目的目标只在 [README](../README.md) 中维护，避免两份描述产生冲突。\n\n## 真实结构\n\n[查看可交互架构图](architecture.html)。图中的文件来自源码扫描，依赖线仅由 dependency-cruiser 实际解析得到。未安装工具时只展示文件与模块，不推测调用关系。\n\n[代码目录索引](code-map.md) 由 CLI 自动生成，不要手工复制。\n\n## 模块职责与公开接口\n\n{{REQUIRES_REVIEW:MODULE_RESPONSIBILITIES_AND_CONTRACTS}}\n\n填写要求：每个模块说明职责、公开 API、输入输出以及对应源码路径。无法从代码确认时标记未知。\n\n## 必须遵守的架构约束\n\n已有项目以原有的架构决策和规范为准。以下是默认建议，未经确认不得覆盖已有约定。\n\n1. 不得未经任务授权改变现有公开 API 的行为。\n2. 跨模块依赖通过明确的公开接口，禁止未声明的逆向层级引用。\n3. 外部输入在系统边界校验，密钥不得提交到仓库。\n4. 修改现有模块契约时同步修改相关回归测试和本文档。\n5. 对 JavaScript 或 TypeScript 项目，使用 dependency-cruiser 检测循环依赖及自定义边界。\n\n项目专属禁止依赖规则：\n\n{{REQUIRES_REVIEW:PROJECT_SPECIFIC_BOUNDARIES}}\n\n确认后应将机器可执行的规则填写进 agentrepo.json 的 architecture.forbiddenImports，再运行 arch init 或 arch sync。\n\n## 验证\n\n- \`node .agentrepo/cli.mjs arch view --write\` 更新可视化。\n- \`node .agentrepo/cli.mjs arch check --strict\` 运行实际架构约束检查。\n- \`node .agentrepo/cli.mjs docs check --strict\` 检查链接、索引、可视化新鲜度和待确认占位符。\n\n## 设计决策\n\n重大架构变更请记录于 [决策记录](decisions/README.md)。架构图不代替决策理由。\n`,
-    'docs/github.md':`# GitHub 协作规则\n\n## 优先级\n\n接入已有项目时，原有 CI、Issue/PR 模板、Changelog 和 AGENTS.md 优先，脚手架不能重写其含义。查阅原项目的 CONTRIBUTING、CODEOWNERS 和安全规则。\n\n## 提交 Issue\n\nBug 提供复现步骤、环境、预期与实际结果。功能建议提供可测试的验收条件。真实凭据、生产数据和个人隐私不得写进公开 Issue。\n\n## 提交 PR\n\n说明目的和改动范围，执行项目已有的测试命令，记录确实运行过的检查和跳过的检查。API 或用户可见行为改变时维护原项目的 Changelog；不要通过修改日期伪造验证记录。\n\n## Workflows\n\n已有 CI 不自动替换、不追加第二套。空项目提供只读权限的 AgentRepo 检查；接入已有项目时需要显式使用 init --github-workflow 才可新增，且不能替换现有 Workflow。不要在无许可时修改部署和发布流程。\n\n## 核对\n\n运行 \`node .agentrepo/cli.mjs github check\` 检查 GitHub 工程规范的文件位置。缺少模板不意味着项目不合格；遵守项目自身约定优先。\n`,
-    'docs/development.md':`# 开发与验证\n\n## 运行环境\n\n检测到的项目类型：${d.stack}。检测结果不保证命令可运行，需通过真实执行确认。\n\n项目运行前提、数据库及测试数据：\n\n{{REQUIRES_REVIEW:ENVIRONMENT_AND_FIXTURES}}\n\n不要提交真实密钥或生产数据。建议在 \`.env.example\` 中列出变量名和安全占位值。\n\n## 统一操作入口\n\n\`node .agentrepo/cli.mjs doctor\` 检查配置与待确认项。\n\`node .agentrepo/cli.mjs verify\` 执行 agentrepo.json 的实际检查，未配置的项目返回 SKIP。\n\`node .agentrepo/cli.mjs locate "关键字"\` 在真实代码中定位文件。\n\`node .agentrepo/cli.mjs docs check\` 检查文档链接与代码索引。\n\`node .agentrepo/cli.mjs docs check --strict\` 检查占位符和架构图的新鲜度。\n\`node .agentrepo/cli.mjs arch view --write\` 生成独立 HTML 架构图。\n\`node .agentrepo/cli.mjs eval run\` 执行已登记的回归检查。\n\n## 任务完成标准\n\n1. 修改前先定位相关源文件、测试与接口。\n2. 修改后执行相关测试和静态检查，并记录通过、失败及跳过项。\n3. 公共接口变化必须更新相应文档与回归测试。\n4. 长任务在 docs/plans 中留交接记录，不把调试日志整份提交。\n5. 未运行的检查不得表述为通过。\n`,
+    'AGENTS.md':`# Agent instructions
+
+## Read first
+
+- Purpose: \`README.md\`. Module contracts: \`docs/architecture.md\`. Commands: \`docs/development.md\`.
+- Locate code with \`node .agentrepo/cli.mjs locate "keywords"\`; \`docs/code-map.md\` is only an index.
+
+## Work rules
+
+1. Follow existing project rules first. For adopted projects, read \`.agentrepo/adoption-guide.md\` if present.
+2. Inspect affected code and tests. Keep changes in scope; preserve public behavior unless approved.
+3. Run relevant tests and \`node .agentrepo/cli.mjs verify\`. Report PASS, FAIL, SKIP and unrun checks separately.
+4. After source or contract changes, run \`node .agentrepo/cli.mjs docs check\`. Refresh \`docs/architecture.html\` with \`arch view --write\` when dependencies change.
+5. For JS/TS architecture changes, run \`arch check --strict\` if configured. Never invent missing dependency edges.
+6. For multi-session tasks, record verified results and remaining work under \`docs/plans/\`.
+7. Isolate concurrent work and test data. Never commit secrets or modify production without approval.
+`,
+    'docs/architecture.md':`# Architecture
+
+Purpose: [README](../README.md). Files: [code map](code-map.md). [Interactive graph](architecture.html) draws only verified dependency-cruiser edges; without analysis it shows files only.
+
+## Module contracts
+
+{{REQUIRES_REVIEW:MODULE_RESPONSIBILITIES_AND_CONTRACTS}}
+
+For each module, record source path, responsibility, public API and callers. Mark unknowns.
+
+## Boundaries
+
+{{REQUIRES_REVIEW:PROJECT_SPECIFIC_BOUNDARIES}}
+
+Existing rules take precedence. Public API changes need approval. Store approved JS/TS import limits in \`agentrepo.json\` under \`architecture.forbiddenImports\`.
+
+## Check
+
+With \`node .agentrepo/cli.mjs\`, run \`arch sync\` after rule changes, \`arch check --strict\` for import constraints and \`docs check --strict\` for documentation.
+
+Record design rationale in [decisions](decisions/README.md).
+`,
+    'docs/github.md':`# GitHub policy
+
+Existing CI, Issue/PR templates and release rules take precedence. Find them with \`node .agentrepo/cli.mjs github check\`.
+
+- **Bugs:** Provide reproduction, environment, expected and actual behavior. Remove secrets.
+- **Features:** Specify testable acceptance criteria.
+- **PRs:** State scope, compatibility, executed tests and unrun checks; update docs and Changelog if affected.
+- **CI:** Never replace existing Workflows. Adding CI to adopted repos requires explicit \`init --github-workflow\`.
+`,
+    'docs/development.md':`# Development
+
+Stack: ${d.stack}, detected but unverified. Confirm setup, dev and test commands in \`agentrepo.json\`.
+
+## Environment and fixtures
+
+{{REQUIRES_REVIEW:ENVIRONMENT_AND_FIXTURES}}
+
+Use disposable test data. Never expose production secrets.
+
+## Checks
+
+Use \`node .agentrepo/cli.mjs\` with:
+
+- \`doctor\` for missing setup and review fields.
+- \`verify\` for configured tests; SKIP is not PASS.
+- \`docs check --strict\` for document freshness and placeholders.
+- \`eval run\` for known regressions.
+
+Record executed checks and remaining failures. Update tests and docs when public contracts change; hand off multi-session work in \`docs/plans/\`.
+`,
     'docs/decisions/README.md':'# 架构决策\n\n只记录难以从代码还原的设计理由。使用 [决策记录模板](_TEMPLATE.md)，填写背景、备选方案、决定、影响范围和验收。小修改不需要建立决策文件。\n',
     'docs/decisions/_TEMPLATE.md':'# 决策编号与标题\n\n状态：待决策\n\n## 背景\n\n{{DECISION_CONTEXT}}\n\n## 可选方案\n\n{{ALTERNATIVES_AND_TRADEOFFS}}\n\n## 决定及理由\n\n{{DECISION_AND_RATIONALE}}\n\n## 影响的代码与验证\n\n{{AFFECTED_PATHS_AND_TESTS}}\n',
     'docs/plans/README.md':'# 长期任务\n\n只有跨多次会话或复杂的开发任务需要保存计划。复制 [任务交接模板](_TEMPLATE.md) 为独立文件，保留任务边界、验收结果、剩余工作和阻塞项。\n',

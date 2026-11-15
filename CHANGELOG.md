@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.8.1] · 2026-11-15
+
+### Changed
+
+- 精简生成的 AGENTS、架构、开发和 GitHub 协作文档，并增加内容质量回归测试。
+
+## [0.8.0] · 2026-11-15
+
 ### Added
 
 - v0.8.0 existing-repository adoption protocol with `adopt scan`, `plan`, `apply`, `activate`, `verify`, and `reconcile`.

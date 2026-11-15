@@ -2,7 +2,7 @@
 
 面向 Coding Agent 的代码库脚手架。使用一个 Node.js CLI 将新仓库初始化、已有仓库接入、代码定位、文档漂移检查、可执行验证、架构依赖约束、跨任务交接和 Eval 放进同一套流程。
 
-当前版本：0.8.0。最低 Node.js 20。CLI 本体没有运行时 npm 依赖。`dependency-cruiser` 由 JavaScript/TypeScript 项目自行安装作为开发依赖。Shell、Go、Python 等非 JavaScript 项目不会强制启用 JS 模块检查。
+当前版本：0.8.1。最低 Node.js 20。CLI 本体没有运行时 npm 依赖。`dependency-cruiser` 由 JavaScript/TypeScript 项目自行安装作为开发依赖。Shell、Go、Python 等非 JavaScript 项目不会强制启用 JS 模块检查。
 
 ## 设计原则：完整模板、明确占位符、独立 HTML
 
