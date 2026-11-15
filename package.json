@@ -1,6 +1,6 @@
 {
   "name": "agentrepo-kit",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Agent-ready repository CLI, verified docs, architecture checks and replayable evals",
   "type": "module",
   "bin": {

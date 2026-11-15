@@ -1,159 +1,69 @@
 # AgentRepo Kit
 
-**让代码仓库更适合 Coding Agent 理解、修改、验证和交接。**
+给新项目生成 Agent 规则、架构 HTML、验证命令和 Eval；接手已有仓库时，原规则优先，缺什么补什么。
 
-AgentRepo Kit 是一套可接入新项目和已有仓库的 Node.js 命令行脚手架。它提供已经写好的开发规则、清晰的待确认占位符、可视化架构 HTML、可执行的仓库检查，以及保留失败案例的 Eval。
+Node.js 20+ · v0.8.1 · MIT。CLI 无第三方 npm 运行时依赖；尚未发布到 npm Registry。
 
-> 当前版本为 `v0.8.0`，需要 Node.js 20 或更高版本。CLI 本体不依赖第三方 npm 运行时包。
->
-> 项目仍处于实验阶段。脚手架的自动化测试不能等同于真实 Coding Agent 的开发成功率。
+[English](README.en.md) · [完整用法](docs/USAGE.zh-CN.md) · [架构](docs/ARCHITECTURE.zh-CN.md) · [Eval](docs/EVAL.zh-CN.md) · [交互式架构图示例](examples/architecture-demo.html)
 
-[English](README.en.md) · [完整使用文档](docs/USAGE.zh-CN.md) · [架构设计](docs/ARCHITECTURE.zh-CN.md) · [Eval 说明](docs/EVAL.zh-CN.md) · [架构 HTML 示例](examples/architecture-demo.html)
+## 使用
 
-## 为什么做这个项目
-
-一个新启动的 Coding Agent 应当能直接从仓库获得以下信息。
-
-1. 项目做什么，关键模块在哪里。
-2. 哪些代码可以修改，哪些接口和架构边界不能破坏。
-3. 如何安装、启动、测试，以及如何判断任务完成。
-4. 架构图和文档是否仍与真实代码一致。
-5. 前一轮任务做过什么、失败原因是什么、接下来需要验证什么。
-
-为此，AgentRepo Kit **不要求用户从空白文档开始**。通用规则提前写好；代码事实由程序提取；业务事实保留 `{{REQUIRES_REVIEW:...}}`，不允许猜测填充。
-
-## 核心能力
-
-| 能力 | 对应机制 |
-| --- | --- |
-| 一次初始化 | 空项目带完整 GitHub 规范；已有项目优先保留现有 CI、Issue、PR 和 Changelog，可预览改动 |
-| Agent 入口 | 简短 `AGENTS.md`，把详细规则和项目知识留在仓库中 |
-| 代码定位 | 生成文件索引并按任务描述返回相关源码路径 |
-| 架构可视化 | 生成自包含 `docs/architecture.html`，支持搜索和依赖查看 |
-| 真实依赖约束 | 对 JavaScript/TypeScript 项目可接入 `dependency-cruiser` |
-| 文档防过时 | 检查路径、占位符、代码索引、架构图指纹和受影响文档复审 |
-| 程序化验证 | `doctor`、`verify`、`docs check`、`arch check` |
-| 持续 Eval | 内置回归样例、故障案例、固定评估任务与结果统计 |
-
-### 生成后的仓库结构
-
-```text
-my-project/
-├── README.md                    # 项目目标，需根据实际业务确认
-├── AGENTS.md                    # 已写好的智能体规则
-├── agentrepo.json               # 检测到的配置和待确认项
-├── docs/
-│   ├── architecture.md          # 架构理由及边界
-│   ├── architecture.html        # 可直接打开的交互式架构图
-│   ├── code-map.md              # 从真实文件树生成
-│   ├── development.md           # 开发和验收步骤
-│   ├── decisions/_TEMPLATE.md
-│   └── plans/_TEMPLATE.md
-├── eval/
-│   ├── regressions.json
-│   ├── scenarios.json
-│   ├── incidents.json
-│   └── tasks.json
-└── .agentrepo/
-    ├── cli.mjs
-    ├── adoption.mjs
-    └── architecture-template.html
-```
-
-初始化仅添加缺失文件。已有的 README、AGENTS、自定义架构 HTML、GitHub 工作流和同类模板都不会被覆盖。已有项目默认不新增 Workflow，需显式使用 `init --github-workflow`。
-
-初始化会提供 `docs/github.md` 和 GitHub 模板，运行 `agentrepo github check` 可以核对现有 Workflow、Issue、PR 和 Changelog。
-
-## 五分钟开始
-
-目前提供源码方式安装。**尚未声明该包已经发布到 npm Registry。**
+从源码安装 CLI：
 
 ```sh
-# 在 AgentRepo Kit 源码目录
 npm install --offline --ignore-scripts
 npm link
-
-# 先预览，再初始化新项目或已有项目
 agentrepo init ../my-project --dry-run
 agentrepo init ../my-project
-
 cd ../my-project
 node .agentrepo/cli.mjs doctor
-node .agentrepo/cli.mjs docs check
-node .agentrepo/cli.mjs eval run
-node .agentrepo/cli.mjs arch view --check
+node .agentrepo/cli.mjs verify
 ```
 
-不需要全局安装也可以执行 `node /path/to/agentrepo-kit/bin/agentrepo.mjs init /path/to/project`。
+`init` 只新增缺失文件。已存在的 README、AGENTS、架构 HTML、Workflow、Issue、PR 和 Changelog 不会被覆盖；接手已有仓库时也不会默认添加 CI。
 
-### 开启 JavaScript/TypeScript 架构检查
+## 接手已有仓库
 
-```sh
-# 在目标项目里
-node .agentrepo/cli.mjs arch init
-npm install --save-dev dependency-cruiser
-node .agentrepo/cli.mjs arch check --strict
-node .agentrepo/cli.mjs arch view --write
-```
-
-生成的依赖线只来自真实分析结果。如果分析器未安装，只展示文件和模块列表，不虚构依赖。其他语言不会被强制执行 JavaScript 架构检查。
-
-## 已有仓库正式接入
-
-**已有项目不是执行一次 `init` 就完成规则接管。** 先发现原项目规则，保存可审查的计划，明确批准新增和短入口，最后核验原规则未被覆盖。
+不要把 `init` 当成规则接管。先扫描原规则、审查接入计划，再显式批准。
 
 ```sh
-cd existing-project
+cd /path/to/existing-project
 agentrepo adopt scan
 agentrepo adopt plan --write
 agentrepo adopt apply --approve
-agentrepo adopt activate --approve --reason "已阅读并核对现有 AGENTS.md 及相关工程约束"
+agentrepo adopt activate --approve --reason "已核对原项目规则和兼容性"
 agentrepo adopt verify
 ```
 
-原有 `AGENTS.md`、Claude/Cursor 规则、Workflow、PR/Issue 和 Changelog 优先。CLI 不会覆盖它们，短入口需要明确批准。`adopt verify` 只证明接入机制完整，不代替原项目测试和真实 Agent Eval。
+`activate` 只向已有 `AGENTS.md` 追加经批准的入口，不重写原规则。`verify` 检查原文件变化和待确认项，不代表业务功能已经通过测试。[接入规范](docs/ADOPTION.zh-CN.md)
 
-[查看完整接入规范](docs/ADOPTION.zh-CN.md)。
+## 生成什么
 
-## GitHub 协作模板
+| 文件 | 用途 |
+| --- | --- |
+| `AGENTS.md` | 简短任务规则，已有文件优先 |
+| `docs/architecture.md` | 模块职责、接口与边界，未知业务事实保留待审占位符 |
+| `docs/architecture.html` | 可搜索的离线架构图，仅显示真实依赖分析结果 |
+| `docs/development.md` | 环境、命令与验证要求 |
+| `docs/code-map.md` | 程序生成的代码目录 |
+| `.github/`、`CHANGELOG.md` | 空仓库默认协作模板，已有仓库避免重复 |
+| `eval/`、`.agentrepo/` | 回归数据和统一 CLI |
 
-空仓库附带 CI Workflow、Bug/Feature Issue Forms、PR 检查清单和 Keep a Changelog 的 `Unreleased` 结构。接入已有项目会先查找 GitHub 支持的其他模板位置和已有的 Changelog 文件名，不覆盖也不创建重复的模板。已有仓库默认不激活新 CI。
+项目专属事实通过 `{{REQUIRES_REVIEW:...}}` 标记。未完成审查时，`docs check --strict` 会失败，不会把未知内容自动编成事实。
+
+## 常用命令
 
 ```sh
 agentrepo github check
-agentrepo init ./existing-project --dry-run
-# 确认项目无现有 CI 且确实需要时，再显式开启
-agentrepo init ./existing-project --github-workflow
+agentrepo locate "task keywords" --k 3
+agentrepo docs check --strict
+agentrepo arch view --write
+agentrepo eval run
 ```
 
-## CLI 命令
+JavaScript/TypeScript 项目按需安装 `dependency-cruiser`，再运行 `agentrepo arch init` 和 `agentrepo arch check --strict`。未安装分析器时，不虚构依赖连线，也不将 SKIP 计为通过。
 
-| 命令 | 作用 |
-| --- | --- |
-| `agentrepo init [dir] --dry-run` | 预览将创建的文件 |
-| `agentrepo init [dir]` | 安全初始化项目 |
-| `agentrepo adopt scan` | 只读识别原项目规则及指纹 |
-| `agentrepo adopt plan --write` | 保存正式接入计划 |
-| `agentrepo adopt apply --approve` | 审核后仅补充缺失文件 |
-| `agentrepo adopt activate --approve --reason ...` | 追加原规则优先的可审查入口 |
-| `agentrepo adopt verify` | 检查规则漂移、接入状态和剩余人工确认项 |
-| `agentrepo adopt reconcile --approve --reason ...` | 经复核后更新原规则基线 |
-| `agentrepo doctor` | 检查项目环境和待确认项 |
-| `agentrepo map --check` | 检查代码索引是否过期 |
-| `agentrepo locate "任务描述" --k 3` | 定位可能相关的源码文件 |
-| `agentrepo docs check --base SHA` | 检测文档结构、源码变更和复审状态 |
-| `agentrepo docs check --strict` | 禁止将尚未确认的占位符当作完成 |
-| `agentrepo arch check --strict` | 要求架构检查实际执行成功 |
-| `agentrepo arch view --write` | 更新架构 HTML |
-| `agentrepo verify --require test` | 要求实际执行测试，不能跳过 |
-| `agentrepo eval run` | 执行仓库回归检查 |
-| `agentrepo eval scenarios` | 执行隔离的故障场景 |
-| `agentrepo eval dream` | 运行确定性开发流程模拟，不会调用大模型 |
-| `agentrepo eval report --input trials.json` | 汇总配对实验的结果和真实 Token 用量 |
-
-初始化后，也可以用 `node .agentrepo/cli.mjs` 代替全局 `agentrepo` 命令。
-
-## 如何参与开发
+## 开发与验证
 
 ```sh
 npm test
@@ -162,15 +72,6 @@ npm run check
 npm pack --dry-run
 ```
 
-当前源码的自动化基线为 42 项 Node.js 测试和 6 项隔离 Eval 场景。历史结果存放在 [`reports/`](reports/)，请查看报告中的限制说明。`dependency-cruiser` 在部分离线评估环境中尚未完成真实二进制集成测试；目前不能宣称已测得真实 Coding Agent 的 Token 减少率。
+当前测试数量以 CI 为准。[历史评估](reports/) 单独记录。确定性 Eval 不等于 Coding Agent 的真实任务成功率；尚无配对实验可证明 Token 减少率。
 
-修复 Bug 时，先添加能够复现失败的测试，并将具有长期价值的失败记录写入 Eval。提交前运行上述命令。详见 [贡献指南](CONTRIBUTING.md) 和 [Eval 设计](docs/EVAL.zh-CN.md)。
-
-## 项目状态与许可
-
-- 当前代码：`v0.8.0`，已经完成 CLI 测试、基础架构 HTML 和内部回归检查。
-- 尚未完成：多模型真实编程 A/B 评估、第三方分析器完整联网集成、浏览器截图视觉验收。
-- 已知局限：当前源码定位主要使用轻量词法方法，大型多语言单仓库还需要更广泛评估。
-- 开源协议：[MIT](LICENSE)。第三方评测项目源代码不随本仓库分发。
-
-[更新记录](CHANGELOG.md) · [GitHub 发布说明](docs/PUBLISHING.zh-CN.md) · [安全说明](SECURITY.md) · [行为准则](CODE_OF_CONDUCT.md)
+[贡献指南](CONTRIBUTING.md) · [更新记录](CHANGELOG.md) · [发布说明](docs/PUBLISHING.zh-CN.md) · [安全说明](SECURITY.md) · [行为准则](CODE_OF_CONDUCT.md)

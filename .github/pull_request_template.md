@@ -1,18 +1,19 @@
-## 改动目的
+## Change
 
-说明真实问题和关联 Issue。
+What changes, why, and related Issue if any?
 
-## 修改范围与兼容性
+## Compatibility
 
-说明影响的模块、公开接口和已有项目约束。
+Affected APIs, migrations and project rules.
 
-## 验证记录
+- [ ] Existing project instructions and CI policies were preserved.
 
-- [ ] 记录实际执行过的测试命令和结果
-- [ ] 修复 Bug 时添加可重放回归测试，或解释不适用原因
-- [ ] 核对受影响文档、架构图和 Changelog
-- [ ] 保留已有仓库的 Workflow、Issue 和 PR 规则
+## Verification
 
-## 未验证的部分
+- [ ] Actual test commands and PASS, FAIL or SKIP; UI screenshots when relevant.
+- [ ] Regression coverage for behavior changes, or reason not applicable.
+- [ ] Docs, architecture and Changelog reviewed.
 
-哪些检查未执行或被跳过？不要把 SKIP 写成 PASS。
+## Risks
+
+Unrun checks and known limitations.
