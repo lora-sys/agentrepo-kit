@@ -1,5 +1,17 @@
 # 更新日志
 
+## [Unreleased]
+
+### Added
+
+- GitHub Workflow、Issue、PR、Changelog 预设模板和已有项目优先的接入规则。
+- 新增 github check 与隔离的 GitHub 回归场景。
+
+### Fixed
+
+- 避免重复生成其他支持路径上的 PR 模板。
+- 避免接手已有仓库时自动激活新 Workflow。
+
 ## v0.6.0 · 2026-11-15
 
 - 增加已写好规则、明确业务占位符的项目文档模板。

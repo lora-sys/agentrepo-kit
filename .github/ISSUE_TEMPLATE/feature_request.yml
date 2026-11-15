@@ -1,21 +1,24 @@
 name: Feature request
-description: Suggest a small, testable improvement
-labels: [enhancement]
+description: Suggest a testable improvement
 body:
   - type: textarea
     id: problem
     attributes:
-      label: 目前遇到的具体问题
+      label: 要解决的具体问题
     validations:
       required: true
   - type: textarea
     id: outcome
     attributes:
-      label: 希望达到的可验证结果
+      label: 预期行为与验收条件
+      description: 描述可以独立核验的结果。
     validations:
       required: true
   - type: textarea
+    id: impact
+    attributes:
+      label: 对已有仓库兼容性的影响
+  - type: textarea
     id: eval
     attributes:
-      label: 如何用 Eval 证明改动有效
-      description: 给出可复现的测试场景，或说明为什么需要真实 Agent 实验。
+      label: Eval 复现与验收方法

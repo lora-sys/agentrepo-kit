@@ -7,7 +7,7 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const VERSION = '0.6.0';
+const VERSION = '0.7.0';
 const IGNORE = new Set(['.git', '.agentrepo', 'node_modules', '.venv', 'venv', 'dist', 'build', 'coverage', '.next', '.cache', '.turbo', '__pycache__', 'vendor', '.npm', '.pnpm-store', 'target', '.pytest_cache']);
 const SOURCE_ROOTS = ['src', 'app', 'apps', 'lib', 'core', 'packages', 'services', 'tests', 'test', 'internal', 'cmd', 'bin', 'scripts', 'utils'];
 const SOURCE_EXT = new Set(['.js','.jsx','.mjs','.cjs','.ts','.tsx','.mts','.cts','.py','.go','.rs','.java','.kt','.rb','.sh','.bash','.zsh','.php','.cs','.swift','.c','.h','.cc','.cpp','.vue','.svelte','.html','.css','.scss','.json','.yaml','.yml']);
@@ -25,7 +25,7 @@ function argsOf(tokens) {
     const x=tokens[i];
     if (!x.startsWith('--')) {pos.push(x);continue;}
     const eq=x.indexOf('=');const key=x.slice(2,eq<0?undefined:eq);
-    if (['dry-run','json','check','write','help','strict','arch'].includes(key)) opts[key]=true;
+    if (['dry-run','json','check','write','help','strict','arch','github-workflow'].includes(key)) opts[key]=true;
     else if(eq>=0) opts[key]=x.slice(eq+1);
     else if(tokens[i+1]!==undefined && !tokens[i+1].startsWith('--')) opts[key]=tokens[++i];
     else opts[key]=true;
@@ -182,15 +182,51 @@ function placeholderStatus(root){
   return pending;
 }
 
-const DEFAULT_SCENARIOS = [{"id":"site-routes-preserved","description":"Existing site-route documentation is not reinterpreted as local filesystem paths","files":{"docs/content/commands.md":"# docs\n\n[Install](/commands/npm-install)\n"},"steps":[{"action":"init","expect":true},{"action":"docs-check","expect":true}]},{"id":"broken-managed-link","description":"Broken managed documentation link must fail","files":{"docs/architecture.md":"# Architecture\n\n[Missing](never-created.md)\n"},"steps":[{"action":"init","expect":true},{"action":"docs-check","expect":false}]},{"id":"stale-map-detected","description":"A source file added after init invalidates the index and can be repaired","files":{"src/a.js":"export const a=1;\n"},"steps":[{"action":"init","expect":true},{"action":"write","path":"src/b.js","content":"export const b=2;\n","expect":true},{"action":"docs-check","expect":false},{"action":"map-write","expect":true},{"action":"docs-check","expect":true}]},{"id":"preserve-human-agent-guidance","description":"Initializing an existing repo must preserve AGENTS.md","files":{"AGENTS.md":"Human-written instructions.\n","src/index.js":"export const a=1;\n"},"steps":[{"action":"init","expect":true},{"action":"init-again","expect":true},{"action":"contains","path":"AGENTS.md","content":"Human-written instructions.\n","expect":true}]},{"id":"shell-architecture-skipped","description":"Do not force JavaScript dependency checker on shell project","files":{"nvm.sh":"nvm() { :; }\n"},"steps":[{"action":"init","expect":true},{"action":"arch-skip","expect":true}]},{"id":"arch-rules-generated","description":"JavaScript module checker configuration is generated","files":{"src/a.js":"import \"./b.js\";\n","src/b.js":"export default 1;\n"},"steps":[{"action":"init","expect":true},{"action":"arch-init","expect":true},{"action":"arch-config","expect":true}]}];
-function template(root) {
+const DEFAULT_SCENARIOS = [{"id":"site-routes-preserved","description":"Existing site-route documentation is not reinterpreted as local filesystem paths","files":{"docs/content/commands.md":"# docs\n\n[Install](/commands/npm-install)\n"},"steps":[{"action":"init","expect":true},{"action":"docs-check","expect":true}]},{"id":"broken-managed-link","description":"Broken managed documentation link must fail","files":{"docs/architecture.md":"# Architecture\n\n[Missing](never-created.md)\n"},"steps":[{"action":"init","expect":true},{"action":"docs-check","expect":false}]},{"id":"stale-map-detected","description":"A source file added after init invalidates the index and can be repaired","files":{"src/a.js":"export const a=1;\n"},"steps":[{"action":"init","expect":true},{"action":"write","path":"src/b.js","content":"export const b=2;\n","expect":true},{"action":"docs-check","expect":false},{"action":"map-write","expect":true},{"action":"docs-check","expect":true}]},{"id":"preserve-human-agent-guidance","description":"Initializing an existing repo must preserve AGENTS.md","files":{"AGENTS.md":"Human-written instructions.\n","src/index.js":"export const a=1;\n"},"steps":[{"action":"init","expect":true},{"action":"init-again","expect":true},{"action":"contains","path":"AGENTS.md","content":"Human-written instructions.\n","expect":true}]},{"id":"shell-architecture-skipped","description":"Do not force JavaScript dependency checker on shell project","files":{"nvm.sh":"nvm() { :; }\n"},"steps":[{"action":"init","expect":true},{"action":"arch-skip","expect":true}]},{"id":"arch-rules-generated","description":"JavaScript module checker configuration is generated","files":{"src/a.js":"import \"./b.js\";\n","src/b.js":"export default 1;\n"},"steps":[{"action":"init","expect":true},{"action":"arch-init","expect":true},{"action":"arch-config","expect":true}]},{"id":"github-existing-precedence","description":"No duplicate GitHub files when adopting an existing project","files":{"src/index.js":"export const a=1;\n",".github/workflows/ci.yml":"name: Existing CI\n",".github/ISSUE_TEMPLATE/custom.md":"---\nname: custom\nabout: existing\n---\n","docs/pull_request_template.md":"existing PR\n","HISTORY.md":"existing history\n"},"steps":[{"action":"init","expect":true},{"action":"init-again","expect":true},{"action":"exists","path":".github/workflows/agentrepo.yml","expect":false},{"action":"exists","path":".github/pull_request_template.md","expect":false},{"action":"exists","path":"CHANGELOG.md","expect":false},{"action":"github-check","category":"workflow","status":"PRESENT","expect":true}]},{"id":"github-empty-complete","description":"New repositories receive default GitHub project files","files":{},"steps":[{"action":"init","expect":true},{"action":"exists","path":".github/workflows/agentrepo.yml","expect":true},{"action":"exists","path":".github/ISSUE_TEMPLATE/bug_report.yml","expect":true},{"action":"exists","path":".github/pull_request_template.md","expect":true},{"action":"exists","path":"CHANGELOG.md","expect":true}]}];
+// Existing repository policy is authoritative. GitHub templates are fallback defaults.
+function githubInventory(root){
+  const files=walkFiles(root);
+  const ci=files.filter(f=>/^\.github\/workflows\/[^/]+\.ya?ml$/i.test(f));
+  const issue=files.filter(f=>/^\.github\/ISSUE_TEMPLATE\/[^/]+\.(?:yml|yaml|md)$/i.test(f));
+  const pr=files.filter(f=>/^(?:\.github\/|docs\/)?pull_request_template\.(?:md|txt)$/i.test(f)
+    || /^(?:\.github\/|docs\/)?PULL_REQUEST_TEMPLATE\/[^/]+\.(?:md|txt)$/i.test(f));
+  const changelog=files.filter(f=>/^(?:docs\/)?(?:CHANGELOG|CHANGES|HISTORY|NEWS|RELEASES)(?:\.[\w-]+)?$/i.test(f));
+  const existing=files.some(f=>!f.startsWith('.agentrepo/')&&!f.startsWith('eval/'));
+  return {existing,workflow:ci,issue,pr,changelog};
+}
+function githubCheck(root){
+  const x=githubInventory(root);const result={};
+  for(const [name,paths] of Object.entries({workflow:x.workflow,issues:x.issue,pr:x.pr,changelog:x.changelog}))
+    result[name]={status:paths.length?'PRESENT':'MISSING',paths};
+  const guidance=[];
+  if(!x.workflow.length)guidance.push('No repository workflow found. For adopted projects, review CI policy before init --github-workflow.');
+  if(!x.issue.length)guidance.push('No local Issue template; init adds Bug and Feature forms.');
+  if(!x.pr.length)guidance.push('No PR template; init adds a fallback checklist.');
+  if(!x.changelog.length)guidance.push('No changelog; init adds an Unreleased template without inventing history.');
+  return {ok:true,existingProject:x.existing,priority:'existing repository policies and files',categories:result,guidance};
+}
+function githubTemplateFiles(root,opts={}){
+  const x=githubInventory(root),out={};
+  if(!x.workflow.length&&(!x.existing||opts['github-workflow']))out['.github/workflows/agentrepo.yml']="name: AgentRepo checks\non:\n  push:\n  pull_request:\npermissions:\n  contents: read\njobs:\n  agentrepo:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2\n        with:\n          fetch-depth: 0\n      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4\n        with:\n          node-version: '22'\n      - run: node .agentrepo/cli.mjs doctor\n      - run: node .agentrepo/cli.mjs map --check\n      - run: node .agentrepo/cli.mjs arch view --check\n      - run: node .agentrepo/cli.mjs eval run\n      - run: node .agentrepo/cli.mjs eval scenarios\n      - name: Source-doc drift\n        if: github.event_name == 'pull_request'\n        env:\n          BASE_SHA: ${{ github.event.pull_request.base.sha }}\n        run: node .agentrepo/cli.mjs docs check --base \"$BASE_SHA\"\n";
+  if(!x.issue.length){
+    out['.github/ISSUE_TEMPLATE/bug_report.yml']="name: Bug report\ndescription: Report a reproducible defect\nbody:\n  - type: textarea\n    id: observed\n    attributes:\n      label: Actual behavior\n      description: What happened? Include the exact error without credentials.\n    validations:\n      required: true\n  - type: textarea\n    id: expected\n    attributes:\n      label: Expected behavior\n    validations:\n      required: true\n  - type: textarea\n    id: reproduce\n    attributes:\n      label: Minimal reproduction\n      description: Provide commands, inputs and expected versus actual outputs.\n    validations:\n      required: true\n  - type: input\n    id: version\n    attributes:\n      label: Environment and version\n      placeholder: Runtime version, OS and package version\n    validations:\n      required: true\n  - type: textarea\n    id: logs\n    attributes:\n      label: Logs or test results\n      description: Remove personal data, tokens and secrets before posting.\n";
+    out['.github/ISSUE_TEMPLATE/feature_request.yml']="name: Feature request\ndescription: Propose an improvement with testable acceptance criteria\nbody:\n  - type: textarea\n    id: problem\n    attributes:\n      label: Problem to solve\n    validations:\n      required: true\n  - type: textarea\n    id: outcome\n    attributes:\n      label: Expected behavior and acceptance criteria\n      description: Describe observable results and edge cases.\n    validations:\n      required: true\n  - type: textarea\n    id: alternatives\n    attributes:\n      label: Existing workarounds or alternatives\n";
+    out['.github/ISSUE_TEMPLATE/config.yml']='blank_issues_enabled: true\n';
+  }
+  if(!x.pr.length)out['.github/pull_request_template.md']="## Purpose and related issue\n\nExplain why this change is needed. Link the issue if there is one.\n\n## Scope and compatibility\n\nList affected modules, public APIs and any migration steps.\n\n## Verification\n\n- [ ] Ran the relevant automated checks and included results\n- [ ] Added or updated regression tests for behavior changes\n- [ ] Checked documentation, architecture and changelog relevance\n- [ ] Existing project instructions and CI policies were preserved\n\n## Evidence and limitations\n\nGive exact test commands and outcomes. Mark skipped or unrun checks explicitly. For UI changes, attach relevant screenshots where useful.\n";
+  if(!x.changelog.length)out['CHANGELOG.md']="# Changelog\n\nNotable user-facing changes are recorded here using [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).\nDo not replace this file with a raw Git commit log. For an adopted project, do not invent past releases.\n\n## [Unreleased]\n\n### Added\n\n### Changed\n\n### Fixed\n\n### Security\n";
+  return out;
+}
+
+function template(root,opts={}) {
   const d=detect(root);const docsRulePaths=[...new Set([...d.sourceRoots.filter(p=>p!=='.'&&!['test','tests','scripts','utils'].includes(p)).map(p=>`${p}/**`),'*.sh','*.bash','*.zsh','*.js','*.ts','*.py','*.go','nvm-exec','bash_completion','Makefile','Dockerfile'])];
   const cfg={version:2,project:path.basename(path.resolve(root)),stack:d.stack,sourceRoots:d.sourceRoots,commands:d.commands,architecture:{forbiddenImports:[]},docRules:[{id:'architecture',doc:'docs/architecture.md',watch:docsRulePaths}],requiredChecks:[]};
-  return {
+  const files={
     'README.md':`# ${path.basename(path.resolve(root))}\n\n## 项目目标\n\n{{REQUIRES_REVIEW:PROJECT_PURPOSE}}\n\n## 使用者\n\n{{REQUIRES_REVIEW:PRIMARY_USERS}}\n\n## 快速开始\n\n请先阅读 [开发与验证](docs/development.md)，安装、启动和测试命令以 agentrepo.json 中经过确认的配置为准。\n\n## 架构\n\n[架构说明](docs/architecture.md) · [可交互架构图](docs/architecture.html)\n\n## Agent 工作方式\n\n阅读 AGENTS.md，然后执行 \`node .agentrepo/cli.mjs doctor\`。\n`,
     'agentrepo.json':json(cfg),
-    'AGENTS.md':`# Agent instructions\n\nRead \`README.md\` for product purpose and \`docs/architecture.md\` for module boundaries.\nUse \`docs/code-map.md\` only for a quick index; locate source with \`node .agentrepo/cli.mjs locate "keywords"\`.\nCheck \`docs/development.md\` for commands. Consult decisions and task plans only when relevant.\n\n## Execution\n\n- Inspect affected implementation, contracts, and tests before editing.\n- Avoid unrelated changes and preserve public APIs unless the task requires otherwise.\n- Run \`node .agentrepo/cli.mjs verify\`; report failed or skipped checks accurately.\n- Run \`node .agentrepo/cli.mjs docs check\` when source paths or interfaces change.\n- Architecture text is in \`docs/architecture.md\`; inspect interactive verified dependencies in \`docs/architecture.html\` or refresh using \`node .agentrepo/cli.mjs arch view --write\`. Never invent graph edges.\n- For JS/TS repositories initialize and run dependency-cruiser via \`node .agentrepo/cli.mjs arch init\` then \`arch check --strict\`.\n- For long tasks, maintain a specific plan in \`docs/plans/\` with remaining work and observed results.\n- Use isolated worktrees and disposable test data for concurrent or risky work.\n- Do not commit credentials or modify production systems without approval.\n`,
-    'docs/architecture.md':`# 架构说明\n\n## 项目目标\n\n本项目的目标只在 [README](../README.md) 中维护，避免两份描述产生冲突。\n\n## 真实结构\n\n[查看可交互架构图](architecture.html)。图中的文件来自源码扫描，依赖线仅由 dependency-cruiser 实际解析得到。未安装工具时只展示文件与模块，不推测调用关系。\n\n[代码目录索引](code-map.md) 由 CLI 自动生成，不要手工复制。\n\n## 模块职责与公开接口\n\n{{REQUIRES_REVIEW:MODULE_RESPONSIBILITIES_AND_CONTRACTS}}\n\n填写要求：每个模块说明职责、公开 API、输入输出以及对应源码路径。无法从代码确认时标记未知。\n\n## 必须遵守的架构约束\n\n1. 不得未经任务授权改变现有公开 API 的行为。\n2. 跨模块依赖通过明确的公开接口，禁止未声明的逆向层级引用。\n3. 外部输入在系统边界校验，密钥不得提交到仓库。\n4. 修改现有模块契约时同步修改相关回归测试和本文档。\n5. 对 JavaScript 或 TypeScript 项目，使用 dependency-cruiser 检测循环依赖及自定义边界。\n\n项目专属禁止依赖规则：\n\n{{REQUIRES_REVIEW:PROJECT_SPECIFIC_BOUNDARIES}}\n\n确认后应将机器可执行的规则填写进 agentrepo.json 的 architecture.forbiddenImports，再运行 arch init 或 arch sync。\n\n## 验证\n\n- \`node .agentrepo/cli.mjs arch view --write\` 更新可视化。\n- \`node .agentrepo/cli.mjs arch check --strict\` 运行实际架构约束检查。\n- \`node .agentrepo/cli.mjs docs check --strict\` 检查链接、索引、可视化新鲜度和待确认占位符。\n\n## 设计决策\n\n重大架构变更请记录于 [决策记录](decisions/README.md)。架构图不代替决策理由。\n`,
+    'AGENTS.md':`# Agent instructions\n\nRead \`README.md\` for product purpose and \`docs/architecture.md\` for module boundaries.\nUse \`docs/code-map.md\` only for a quick index; locate source with \`node .agentrepo/cli.mjs locate "keywords"\`.\nCheck \`docs/development.md\` for commands. Consult decisions and task plans only when relevant.\n\n## Execution\n\n- Existing repository instructions and GitHub conventions take precedence. Inspect with node .agentrepo/cli.mjs github check.\n- Inspect affected implementation, contracts, and tests before editing.\n- Avoid unrelated changes and preserve public APIs unless the task requires otherwise.\n- Run \`node .agentrepo/cli.mjs verify\`; report failed or skipped checks accurately.\n- Run \`node .agentrepo/cli.mjs docs check\` when source paths or interfaces change.\n- Architecture text is in \`docs/architecture.md\`; inspect interactive verified dependencies in \`docs/architecture.html\` or refresh using \`node .agentrepo/cli.mjs arch view --write\`. Never invent graph edges.\n- For JS/TS repositories initialize and run dependency-cruiser via \`node .agentrepo/cli.mjs arch init\` then \`arch check --strict\`.\n- For long tasks, maintain a specific plan in \`docs/plans/\` with remaining work and observed results.\n- Use isolated worktrees and disposable test data for concurrent or risky work.\n- Do not commit credentials or modify production systems without approval.\n`,
+    'docs/architecture.md':`# 架构说明\n\n## 项目目标\n\n本项目的目标只在 [README](../README.md) 中维护，避免两份描述产生冲突。\n\n## 真实结构\n\n[查看可交互架构图](architecture.html)。图中的文件来自源码扫描，依赖线仅由 dependency-cruiser 实际解析得到。未安装工具时只展示文件与模块，不推测调用关系。\n\n[代码目录索引](code-map.md) 由 CLI 自动生成，不要手工复制。\n\n## 模块职责与公开接口\n\n{{REQUIRES_REVIEW:MODULE_RESPONSIBILITIES_AND_CONTRACTS}}\n\n填写要求：每个模块说明职责、公开 API、输入输出以及对应源码路径。无法从代码确认时标记未知。\n\n## 必须遵守的架构约束\n\n已有项目以原有的架构决策和规范为准。以下是默认建议，未经确认不得覆盖已有约定。\n\n1. 不得未经任务授权改变现有公开 API 的行为。\n2. 跨模块依赖通过明确的公开接口，禁止未声明的逆向层级引用。\n3. 外部输入在系统边界校验，密钥不得提交到仓库。\n4. 修改现有模块契约时同步修改相关回归测试和本文档。\n5. 对 JavaScript 或 TypeScript 项目，使用 dependency-cruiser 检测循环依赖及自定义边界。\n\n项目专属禁止依赖规则：\n\n{{REQUIRES_REVIEW:PROJECT_SPECIFIC_BOUNDARIES}}\n\n确认后应将机器可执行的规则填写进 agentrepo.json 的 architecture.forbiddenImports，再运行 arch init 或 arch sync。\n\n## 验证\n\n- \`node .agentrepo/cli.mjs arch view --write\` 更新可视化。\n- \`node .agentrepo/cli.mjs arch check --strict\` 运行实际架构约束检查。\n- \`node .agentrepo/cli.mjs docs check --strict\` 检查链接、索引、可视化新鲜度和待确认占位符。\n\n## 设计决策\n\n重大架构变更请记录于 [决策记录](decisions/README.md)。架构图不代替决策理由。\n`,
+    'docs/github.md':"# GitHub 协作规则\n\n## 优先级\n\n接入已有项目时，已有 CI、Issue/PR 模板、Changelog、AGENTS.md 优先，脚手架不能覆盖其规则。先阅读贡献指南和安全规范。\n\n## Issue 与 PR\n\nBug 提供实际与预期行为、最小复现和环境；功能建议提供可验证的验收条件。PR 说明修改范围、确实执行过的测试和未验证的部分。\n\n## Workflows\n\n已有 CI 不替换、不追加第二套。空项目提供只读的静态检查；已有项目只有显式启用 init --github-workflow 才可创建新 CI，并且不能与现有工作流冲突。不要擅自触发生产部署。\n\n## Changelog\n\n有原始 CHANGELOG、HISTORY、NEWS 等就继续沿用。没有时只创建 Unreleased 模板，不编造历史版本。\n\n运行 node .agentrepo/cli.mjs github check 读取实际文件位置。\n",
     'docs/development.md':`# 开发与验证\n\n## 运行环境\n\n检测到的项目类型：${d.stack}。检测结果不保证命令可运行，需通过真实执行确认。\n\n项目运行前提、数据库及测试数据：\n\n{{REQUIRES_REVIEW:ENVIRONMENT_AND_FIXTURES}}\n\n不要提交真实密钥或生产数据。建议在 \`.env.example\` 中列出变量名和安全占位值。\n\n## 统一操作入口\n\n\`node .agentrepo/cli.mjs doctor\` 检查配置与待确认项。\n\`node .agentrepo/cli.mjs verify\` 执行 agentrepo.json 的实际检查，未配置的项目返回 SKIP。\n\`node .agentrepo/cli.mjs locate "关键字"\` 在真实代码中定位文件。\n\`node .agentrepo/cli.mjs docs check\` 检查文档链接与代码索引。\n\`node .agentrepo/cli.mjs docs check --strict\` 检查占位符和架构图的新鲜度。\n\`node .agentrepo/cli.mjs arch view --write\` 生成独立 HTML 架构图。\n\`node .agentrepo/cli.mjs eval run\` 执行已登记的回归检查。\n\n## 任务完成标准\n\n1. 修改前先定位相关源文件、测试与接口。\n2. 修改后执行相关测试和静态检查，并记录通过、失败及跳过项。\n3. 公共接口变化必须更新相应文档与回归测试。\n4. 长任务在 docs/plans 中留交接记录，不把调试日志整份提交。\n5. 未运行的检查不得表述为通过。\n`,
     'docs/decisions/README.md':'# 架构决策\n\n只记录难以从代码还原的设计理由。使用 [决策记录模板](_TEMPLATE.md)，填写背景、备选方案、决定、影响范围和验收。小修改不需要建立决策文件。\n',
     'docs/decisions/_TEMPLATE.md':'# 决策编号与标题\n\n状态：待决策\n\n## 背景\n\n{{DECISION_CONTEXT}}\n\n## 可选方案\n\n{{ALTERNATIVES_AND_TRADEOFFS}}\n\n## 决定及理由\n\n{{DECISION_AND_RATIONALE}}\n\n## 影响的代码与验证\n\n{{AFFECTED_PATHS_AND_TESTS}}\n',
@@ -212,24 +248,27 @@ function template(root) {
       {id:'AR-008',cause:'Changing module boundaries after initial architecture generation left stale dependency-cruiser configuration',guard:'tests/architecture-sync.test.mjs',status:'fixed'},
       {id:'AR-009',cause:'Source locator failed to normalize execute/exec and handling/handler word forms',guard:'benchmarks/cases.json and tests/scenarios.test.mjs',status:'fixed'},
       {id:'AR-010',cause:'Long-running repair simulation updated code map but forgot the generated HTML architecture view',guard:'tests/replay.test.mjs plus eval view --check',status:'fixed'},
-      {id:'AR-011',cause:'Existing custom architecture HTML could be overwritten by a generic view refresh',guard:'tests/visual-template.test.mjs',status:'fixed'}
+      {id:'AR-011',cause:'Existing custom architecture HTML could be overwritten by a generic view refresh',guard:'tests/visual-template.test.mjs',status:'fixed'},
+      {id:'AR-012',cause:'Existing root or docs PR templates caused duplicate GitHub PR templates',guard:'tests/github-templates.test.mjs',status:'fixed'},
+      {id:'AR-013',cause:'Adopting existing repositories enabled a competing workflow',guard:'tests/github-templates.test.mjs',status:'fixed'}
     ]}),
     'eval/scenarios.json':json({schemaVersion:1,cases:DEFAULT_SCENARIOS}),
     'eval/regressions.json':json({schemaVersion:1,cases:[
       {id:'view',description:'Generated architecture HTML is current',argv:['arch','view','--check'],exitCode:0},
       {id:'doctor',description:'Project config remains valid',argv:['doctor'],exitCode:0},
+      {id:'github-check',description:'GitHub governance inspection is read-only',argv:['github','check'],exitCode:0},
       {id:'map',description:'Generated source index remains current',argv:['map','--check'],exitCode:0},
       {id:'docs',description:'Docs have valid local links',argv:['docs','check'],exitCode:0}
     ]}),
     '.agentrepo/cli.mjs':fs.readFileSync(fileURLToPath(import.meta.url),'utf8'),
     '.agentrepo/.gitignore':'cache/\nreports/\n',
-    '.github/workflows/agentrepo.yml':`name: AgentRepo static checks\non:\n  pull_request:\n  push:\n    branches: [main]\njobs:\n  agentrepo:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '22'\n      - run: node .agentrepo/cli.mjs doctor\n      - run: node .agentrepo/cli.mjs map --check\n      - run: node .agentrepo/cli.mjs arch view --check\n      - run: node .agentrepo/cli.mjs eval run\n      - run: node .agentrepo/cli.mjs eval scenarios\n      - name: Source-doc drift\n        if: github.event_name == 'pull_request'\n        env:\n          BASE_SHA: \${{ github.event.pull_request.base.sha }}\n        run: node .agentrepo/cli.mjs docs check --base "$BASE_SHA"\n`
   };
+  return {...files,...githubTemplateFiles(root,opts)};
 }
 function doInit(root, opts={}) {
   root=path.resolve(root);if(fs.existsSync(root) && (!fs.statSync(root).isDirectory() || fs.lstatSync(root).isSymbolicLink()))throw new Error('Target must be a real directory');
   if(!fs.existsSync(root)&&!opts['dry-run'])fs.mkdirSync(root,{recursive:true});
-  const files=template(root),created=[],preserved=[];
+  const files=template(root,opts),created=[],preserved=[];
   // Plan the entire operation before mutating the target.
   for(const rel of Object.keys(files)) {const p=ensureSafeRel(root,rel);if(fs.existsSync(p))preserved.push(rel);else created.push(rel);}
   if(!opts['dry-run'])for(const rel of created)writeIfMissing(root,rel,files[rel]);
@@ -412,10 +451,11 @@ function locate(root,query,opts={}) {
   }
   ranks.sort((a,b)=>b.score-a.score||a.file.localeCompare(b.file));return {query,mode:opts.mode||'enhanced',total:files.length,results:ranks.slice(0,Number(opts.k)||5)};
 }
-const EVAL_COMMANDS = new Set(['doctor','map','docs','locate','verify','arch']);
+const EVAL_COMMANDS = new Set(['doctor','github','map','docs','locate','verify','arch']);
 function readOnlyEvalArgv(argv){
   if (!Array.isArray(argv) || !argv.every(a=>typeof a==='string')) return false;
   const [head,sub,...rest]=argv;
+  if(head==='github')return sub==='check' && argv.length===2;
   if(head==='doctor' || head==='map') return argv.length===1 || (head==='map' && argv.length===2 && sub==='--check');
   if(head==='docs')return sub==='check' && rest.length===0;
   if(head==='arch')return sub==='view' && rest.length===1 && rest[0]==='--check';
@@ -480,6 +520,8 @@ function scenarioEval(casesFile=null) {
           case 'map-write': {const out=ensureSafeRel(tmp,'docs/code-map.md');fs.writeFileSync(out,mapText(tmp));actual=true;break;}
           case 'write': {if(typeof step.content!=='string'||step.content.length>100000)throw new Error('Unsafe write action');const out=ensureSafeRel(tmp,step.path);fs.mkdirSync(path.dirname(out),{recursive:true});fs.writeFileSync(out,step.content);actual=true;break;}
           case 'contains':actual=canRead(ensureSafeRel(tmp,step.path))&&fileText(path.join(tmp,step.path))===step.content;break;
+          case 'exists':actual=canRead(ensureSafeRel(tmp,step.path));break;
+          case 'github-check':actual=githubCheck(tmp).categories[step.category]?.status===step.status;break;
           case 'arch-init':actual=archInit(tmp).status==='PASS';break;
           case 'arch-skip':actual=archInit(tmp).status==='SKIP';break;
           case 'arch-config':actual=canRead(path.join(tmp,'.dependency-cruiser.json'))&&parseJson(path.join(tmp,'.dependency-cruiser.json')).forbidden.some(r=>r.name==='no-circular');break;
@@ -516,7 +558,7 @@ function replayDream(){
     const old=doInit(project);
     add('handoff: repeated init is idempotent',true,old.created.length===0);
     const regression=runEval(project,path.join(project,'eval/regressions.json'));
-    add('eval: permanent read-only regression cases',true,regression.ok&&regression.total===4);
+    add('eval: permanent read-only regression cases',true,regression.ok&&regression.total===5);
     write('eval/adversarial.json',json({schemaVersion:1,cases:[{id:'hostile',argv:['docs','review','--id','architecture'],exitCode:0}]}));
     let prevented=false;try{runEval(project,path.join(project,'eval/adversarial.json'));}catch(e){prevented=/disallow/.test(e.message);}
     add('safety: replay rejects a mutating eval case',true,prevented);
@@ -548,7 +590,8 @@ function auditEval(){
     return {ok:fp===0&&fn===0,suite:'known-fault diagnostic fixtures (not coding-agent accuracy)',matrix:{tp,tn,fp,fn},accuracy:(tp+tn)/cases.length,precision:tp/(tp+fp||1),recall:tp/(tp+fn||1),cases};
   }finally{fs.rmSync(tmp,{recursive:true,force:true});}
 }
-function usage(){return `AgentRepo Kit ${VERSION}\nCommands:\n  agentrepo init [dir] [--dry-run] [--arch] [--json]\n  agentrepo doctor [--json]\n  agentrepo map [--check] [--json]\n  agentrepo locate "query" [--k 5] [--mode filename|enhanced] [--json]\n  agentrepo docs check [--base SHA] [--json]\n  agentrepo docs review --base SHA --id RULE --reason "..."\n  agentrepo arch init [--dry-run] / arch sync [--dry-run] / arch check [--strict]
+function usage(){return `AgentRepo Kit ${VERSION}\nCommands:\n  agentrepo init [dir] [--dry-run] [--arch] [--github-workflow] [--json]\n  agentrepo doctor [--json]
+  agentrepo github check [--json]\n  agentrepo map [--check] [--json]\n  agentrepo locate "query" [--k 5] [--mode filename|enhanced] [--json]\n  agentrepo docs check [--base SHA] [--json]\n  agentrepo docs review --base SHA --id RULE --reason "..."\n  agentrepo arch init [--dry-run] / arch sync [--dry-run] / arch check [--strict]
   agentrepo arch view --write | --check [--input real-depcruise.json]
   agentrepo verify [--require test,lint] [--json]\n  agentrepo eval run [--cases eval/regressions.json] [--json]\n  agentrepo eval add-failure --id id --argv '["doctor"]' --exit 0\n  agentrepo eval locate --cases path/to/cases.json [--mode enhanced] [--k 3]\n  agentrepo eval scenarios [--cases eval/scenarios.json] (isolated fixture regression)
   agentrepo eval dream (deterministic repair and handoff simulation, not an LLM)
@@ -561,6 +604,7 @@ function runCLI(tokens,root=process.cwd()){
   if(head==='version')return {version:VERSION,ok:true};
   if(head==='init')return {ok:true,...doInit(sub||'.',opts)};
   if(head==='doctor')return doDoctor(root);
+  if(head==='github'&&sub==='check')return githubCheck(root);
   if(head==='map') {
     const t=mapText(root),file=path.join(root,'docs/code-map.md');if(opts.write){ensureSafeRel(root,'docs/code-map.md',false);fs.writeFileSync(file,t);return {ok:true,written:true};}
     const correct=canRead(file)&&fileText(file)===t;return {ok:correct,status:correct?'PASS':'FAIL',file:'docs/code-map.md',hint:'Run agentrepo map --write to regenerate'};
@@ -593,4 +637,4 @@ if(fs.realpathSync(fileURLToPath(import.meta.url))===entry){
     if(r.ok===false)process.exitCode=1;
   }catch(e){process.stderr.write(`agentrepo: ${e.message}\n`);process.exitCode=1;}
 }
-export {argsOf,doInit,doDoctor,doDocs,doVerify,drift,doReview,locate,locationEval,trialReport,runCLI,mapText,sourceFiles,globRegex,ensureSafeRel,runEval,archInit,archSync,archCheck,replayDream,scenarioEval,auditEval,readOnlyEvalArgv,renderArchitectureHtml,buildArchitectureData,archView,placeholderStatus};
+export {argsOf,doInit,githubCheck,githubInventory,githubTemplateFiles,doDoctor,doDocs,doVerify,drift,doReview,locate,locationEval,trialReport,runCLI,mapText,sourceFiles,globRegex,ensureSafeRel,runEval,archInit,archSync,archCheck,replayDream,scenarioEval,auditEval,readOnlyEvalArgv,renderArchitectureHtml,buildArchitectureData,archView,placeholderStatus};

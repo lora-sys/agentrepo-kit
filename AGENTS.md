@@ -20,7 +20,8 @@ This repository contains AgentRepo Kit itself, a Node.js CLI that generates agen
 
 ## Working rules
 
-1. Preserve compatibility with Node.js 20 and the existing CLI command names.
+1. When adopting projects, respect existing GitHub workflows, templates and changelogs before adding fallbacks.
+2. Preserve compatibility with Node.js 20 and the existing CLI command names.
 2. Initializing an existing repository must not overwrite user-managed files.
 3. Never invent dependency edges or treat a skipped check as passed.
 4. Never report model token savings without actual paired model usage records.

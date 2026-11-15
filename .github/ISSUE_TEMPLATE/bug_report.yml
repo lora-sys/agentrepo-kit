@@ -1,28 +1,35 @@
 name: Bug report
-description: Report a reproducible bug
-labels: [bug]
+description: Report a reproducible failure in AgentRepo Kit
 body:
   - type: textarea
-    id: issue
+    id: actual
     attributes:
-      label: 问题描述
-      description: 具体发生了什么？预期行为是什么？
+      label: 实际行为
+      description: 请提供实际错误，并删除个人数据和凭据。
     validations:
       required: true
   - type: textarea
-    id: reproduction
+    id: expected
+    attributes:
+      label: 预期行为
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
     attributes:
       label: 最小复现步骤
-      description: 给出可重复执行的命令、文件结构和必要输入。
+      description: 提供初始化命令、仓库结构及可重复的步骤。
     validations:
       required: true
   - type: input
-    id: node
+    id: environment
     attributes:
-      label: Node.js 版本
-      placeholder: v22.x
+      label: 操作系统及版本
+      placeholder: Ubuntu 24.04, Node 22, AgentRepo Kit 0.7.0
+    validations:
+      required: true
   - type: textarea
     id: checks
     attributes:
-      label: 已执行的检查和输出
-      description: 请删除密钥和敏感信息。不能执行的检查请说明原因。
+      label: 测试与日志
+      description: 可以贴最小 Eval 样例，但不能包含密钥。
