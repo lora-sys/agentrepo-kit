@@ -103,7 +103,7 @@ test('existing project with no test runner does not claim ready',t=>{
 
 test('template AGENTS and development docs contain runnable commands and existing policy priority',t=>{
  const r=tmp(t);init(r);const agents=read(r,'AGENTS.md');const dev=read(r,'docs/development.md');
- assert.match(agents,/Existing project instructions and CI take precedence/);
+ assert.match(agents,/本仓库已确认的禁令优先于通用 Skill/);
  assert.match(agents,/node .agentrepo\/cli.mjs verify/);assert.match(dev,/NOT_CONFIGURED/);
  assert.doesNotMatch(agents,/System Prompt|Zero-shot|Attention/);
 });
@@ -120,4 +120,35 @@ test('npm-style symlink invokes CLI rather than silently exiting',t=>{
  const root=tmp(t),link=path.join(root,'agentrepo');fs.symlinkSync(cli,link);
  const result=spawnSync(link,['version'],{encoding:'utf8'});
  assert.equal(result.status,0,result.stderr);assert.match(result.stdout,/1\.0\.0-rc\.1/);
+});
+
+
+test('project AGENTS contains project-only entry and no generic workflow duplication',t=>{
+ const r=tmp(t);write(r,'package.json',JSON.stringify({name:'demo',scripts:{test:'node --test'}}));init(r);
+ const agents=read(r,'AGENTS.md');
+ assert.ok(agents.split('\n').length<=150);
+ assert.match(agents,/^# /);
+ assert.match(agents,/^## 优先级/m);
+ assert.ok(agents.indexOf('## 优先级')<agents.indexOf('## 命令与真实环境'));
+ assert.match(agents,/工作目录：仓库根目录/);
+ assert.match(agents,/node \.agentrepo\/cli\.mjs verify/);
+ assert.match(agents,/NOT_CONFIGURED/);
+ assert.doesNotMatch(agents,/For bugs and behavior changes|Add or update regression tests|Read relevant code|lora-mode/);
+ assert.doesNotMatch(agents,/pnpm|npm test|node --test/);
+});
+
+test('lora-mode project AGENTS skeleton is opt-in and includes critical project fields',t=>{
+ const r=tmp(t);init(r);
+ assert.equal(fs.existsSync(path.join(r,'templates/AGENTS.project.lora-mode.md')),false);
+ const template=fs.readFileSync(fileURLToPath(new URL('../templates/AGENTS.project.lora-mode.md',import.meta.url)),'utf8');
+ for(const key of ['## 优先级','## 致命陷阱','## 覆盖面','## 命令与真实环境','## 验证与证据','## 不变量','## 深流程'])assert.ok(template.includes(key),key);
+ assert.match(template,/150 行以内/);
+});
+
+
+test('repository contributor AGENTS has precedence and confirmed failure modes',()=>{
+ const body=fs.readFileSync(fileURLToPath(new URL('../AGENTS.md',import.meta.url)),'utf8');
+ assert.ok(body.split('\n').length<=150);
+ assert.ok(body.indexOf('## 优先级')<body.indexOf('## 致命陷阱'));
+ for(const frag of ['NOT_CONFIGURED','符号链接','已有的 `AGENTS.md`','npm test'])assert.ok(body.includes(frag),frag);
 });

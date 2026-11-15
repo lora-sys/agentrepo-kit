@@ -1,9 +1,23 @@
-# Agent instructions for AgentRepo Kit
+# AgentRepo Kit
 
-- Product contract: `README.md`; implementation boundaries: `docs/ARCHITECTURE.zh-CN.md`.
-- CLI entry: `bin/agentrepo.mjs`; tests: `tests/lean.test.mjs`.
-- Preserve user-owned files and CI. Do not infer unconfirmed project commands.
-- Keep the CLI standalone on Node.js 20+. No new runtime packages without approval.
-- For behavior changes, add a regression test; run `npm test` and `npm run check`.
-- Avoid recreating old governance features unless a concrete repository case requires them.
-- Do not claim model-success or token-efficiency improvements without real paired trials.
+## 优先级
+
+本仓库已确认的禁令优先于外部通用 Skill 的默认步骤。
+
+## 致命陷阱
+
+- 覆盖目标仓库已有的 `AGENTS.md`、CI 或架构文档：会删除维护者规则。`init` 与 `adopt --apply` 只能新增缺失文件。
+- 将缺失的验证命令记为通过：会产生虚假验收。必须返回 `NOT_CONFIGURED` 并以非零状态结束。
+- 修改 CLI 调用入口却忽略符号链接：npm 全局安装后可能静默退出。运行 `tests/lean.test.mjs` 中的 npm-style symlink 测试。
+- 重建旧版 HTML、Eval 或复杂 Adopt 流程：会增加默认接入成本。仅在真实仓库缺陷证明需要时扩展。
+
+## 命令与真实环境
+
+- 工作目录：本仓库根目录。
+- CLI 行为修改：运行 `npm test`，检查其退出码。
+- 提交前：运行 `npm run check`，检查其退出码。
+
+## 不变量
+
+- 目标项目必须保持原有规则与 CI 文件内容不变。
+- 发布 CLI 应可独立运行，不依赖安装时不可用的非标准包。

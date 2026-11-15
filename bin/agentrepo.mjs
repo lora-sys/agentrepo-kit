@@ -132,7 +132,20 @@ function directoryMap(root) { const files = walk(root); const dirs = [...new Set
 function sourceDigest(root) { const m = directoryMap(root), f = walk(root).filter(s => s.match(/\.(?:[cm]?[jt]sx?|py|go|rs|sh)$/)); return crypto.createHash('sha256').update(JSON.stringify({ m, f })).digest('hex').slice(0, 16); }
 function archBlock(root) { const d = directoryMap(root); const lines = ['<!-- agentrepo:map:start -->', `Source map fingerprint: \`${sourceDigest(root)}\``, '', '| Path | Files | Responsibility |', '| --- | ---: | --- |', ...(d.length ? d.map(x => `| \`${x.path}\` | ${x.files} | 待项目维护者确认 |`) : ['| 未发现常见源码目录 | 0 | 新项目可在添加代码后更新 |']), '<!-- agentrepo:map:end -->']; return lines.join('\n'); }
 function manual(root) { return `# Architecture\n\n## Main modules\n\n${archBlock(root)}\n\n## Public entrypoints and constraints\n\n填写已确认的业务入口、跨模块边界和不可破坏的接口；尚未确认时保留本节。\n\n## Update\n\nRun \`node .agentrepo/cli.mjs map --write\` after moving or adding source files.\n`; }
-function agents(root, found) { return `# Agent instructions\n\n## Start here\n- Product intent: \`README.md\`\n- Module map: \`docs/architecture.md\`\n- Environment and commands: \`docs/development.md\`\n- Existing project instructions and CI take precedence.\n\n## Work\n1. Read relevant code and its tests before editing.\n2. Keep changes scoped; preserve public API behavior.\n3. For bugs and behavior changes, add or update regression tests.\n4. Run \`node .agentrepo/cli.mjs verify\`; report executed checks and failures.\n5. Do not report unrun checks as passed. Never commit secrets or change production settings without approval.\n\n## Commands\n- \`node .agentrepo/cli.mjs setup\`\n- \`node .agentrepo/cli.mjs dev\`\n- \`node .agentrepo/cli.mjs test\`\n- \`node .agentrepo/cli.mjs verify\`\n\nCheck \`agentrepo.json.commands\` for configured commands. Do not guess commands that are missing.\n`; }
+function agents(root, found) {
+    return `# ${path.basename(root)}
+
+## 优先级
+
+本仓库已确认的禁令优先于通用 Skill 的默认步骤。已有项目规则和 CI 保留原文件。
+
+## 命令与真实环境
+
+- 工作目录：仓库根目录。
+- 命令来源：\`agentrepo.json.commands\`。未配置返回 \`NOT_CONFIGURED\`。
+- 验证入口：\`node .agentrepo/cli.mjs verify\`。只有命令实际执行且退出码为 0 才报告通过。
+`;
+}
 function development(found) { return `# Development\n\n## Stack\n\n${found.stack.map(x => '- ' + x).join('\n')}\n\n## Commands\n\nThe sole command configuration is \`agentrepo.json.commands\`. Execute through the bundled CLI:\n\n\`\`\`sh\nnode .agentrepo/cli.mjs setup\nnode .agentrepo/cli.mjs dev\nnode .agentrepo/cli.mjs test\nnode .agentrepo/cli.mjs verify\n\`\`\`\n\nA missing command is \`NOT_CONFIGURED\`. \`verify\` fails when no verification command is configured. Exit code 0 means the executed checks passed.\n\n## Local services and env\n\nOnly non-secret variable names belong in \`.env.example\`. Document additional services here when confirmed.\n`; }
 function plan(root) {
     if (exists(root) && !isRealDir(root))
