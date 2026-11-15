@@ -6,7 +6,7 @@ AgentRepo Kit provides a Node.js CLI that prepares new or existing repositories 
 
 It ships with written rules and clear `{{REQUIRES_REVIEW:...}}` placeholders. Derived code facts are computed; unknown business facts are not invented.
 
-**Requirements:** Node.js 20+. Current version: `v0.7.0`. No third-party npm runtime dependencies are required by the core CLI.
+**Requirements:** Node.js 20+. Current version: `v0.8.0`. No third-party npm runtime dependencies are required by the core CLI.
 
 [中文说明](README.md) · [Full guide](docs/USAGE.zh-CN.md) · [Architecture](docs/ARCHITECTURE.zh-CN.md) · [Eval guide](docs/EVAL.zh-CN.md)
 
@@ -53,6 +53,20 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and [CHANGEL
 
 Licensed under [MIT](LICENSE). Third-party benchmark repositories are not bundled.
 
-## GitHub collaboration policy
+## GitHub collaboration templates
 
-Fresh repositories get complete GitHub templates. Existing repositories keep their own CI, Issue, PR and changelog conventions. Use `agentrepo github check`; workflows require explicit opt-in on adopted repositories.
+Fresh repositories receive Issue forms, a PR checklist, an `Unreleased` changelog, and a minimal read-only workflow. Existing repositories keep their own templates, conventions and CI; new workflows require explicit `init --github-workflow`. Check with `agentrepo github check`.
+
+## Adopting an existing repository
+
+`init` only adds missing files. Use the formal adoption flow to identify existing instructions, preserve their authority, review and explicitly activate a minimal integration bridge, and detect later policy changes.
+
+```sh
+agentrepo adopt scan
+agentrepo adopt plan --write
+agentrepo adopt apply --approve
+agentrepo adopt activate --approve --reason "Reviewed the existing repository rules and approved the integration"
+agentrepo adopt verify
+```
+
+Existing project instructions have precedence. The readiness check is about repository integration, not proof of semantic understanding or a successful Coding Agent task. See [the detailed guide](docs/ADOPTION.zh-CN.md).

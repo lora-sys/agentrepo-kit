@@ -2,7 +2,7 @@
 
 面向 Coding Agent 的代码库脚手架。使用一个 Node.js CLI 将新仓库初始化、已有仓库接入、代码定位、文档漂移检查、可执行验证、架构依赖约束、跨任务交接和 Eval 放进同一套流程。
 
-当前版本：0.7.0。最低 Node.js 20。CLI 本体没有运行时 npm 依赖。`dependency-cruiser` 由 JavaScript/TypeScript 项目自行安装作为开发依赖。Shell、Go、Python 等非 JavaScript 项目不会强制启用 JS 模块检查。
+当前版本：0.8.0。最低 Node.js 20。CLI 本体没有运行时 npm 依赖。`dependency-cruiser` 由 JavaScript/TypeScript 项目自行安装作为开发依赖。Shell、Go、Python 等非 JavaScript 项目不会强制启用 JS 模块检查。
 
 ## 设计原则：完整模板、明确占位符、独立 HTML
 
@@ -192,6 +192,6 @@ node benchmarks/run.mjs --projects-dir /path/to/source-snapshots --output report
 
 许可：MIT。第三方项目的版权归其原作者所有。
 
-## GitHub 项目接入
+## GitHub 工程规范与已有仓库优先级
 
-使用 `agentrepo github check` 检查 Workflow、Issue、PR 和 Changelog 的真实路径。已有项目默认不新增 Workflow；用 `init --github-workflow` 可以在没有现有工作流时显式启用。已有规则优先，不覆盖已有许可证、贡献说明和项目约束。
+`agentrepo github check` 返回已有 Workflow、Issue、PR 和 Changelog 的实际路径。识别 `.github/`、仓库根目录、`docs/` 等 PR 模板位置以及 `HISTORY.md` 等历史文件。已有项目默认不增加新的 CI Workflow，显式传 `init --github-workflow` 才可在没有现有 Workflow 的情况下创建。CI、项目规则和许可证不自动替换。
