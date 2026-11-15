@@ -24,6 +24,8 @@ jobs:
         run: npm test
       - name: Deterministic Eval smoke
         run: npm run eval:smoke
+      - name: Real-agent harness synthetic smoke (no model calls)
+        run: npm run eval:agent:smoke
       - name: CLI syntax
         run: node --check bin/agentrepo.mjs
       - name: Package inspection

@@ -6,3 +6,10 @@ node_modules/
 !.env.example
 coverage/
 .tmp/
+
+# Private acceptance oracles and locally downloaded source snapshots
+reports/agent-eval-local/
+benchmarks/agent-eval/private-oracles/
+benchmarks/agent-eval/local-sources/
+local-sources/
+private-oracles/

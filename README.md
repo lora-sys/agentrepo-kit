@@ -63,6 +63,10 @@ agentrepo eval run
 
 JavaScript/TypeScript 项目可安装 [dependency-cruiser](https://github.com/sverweij/dependency-cruiser)，再运行 `agentrepo arch init` 和 `agentrepo arch check --strict`。仅有分析结果时才绘制模块依赖线；未运行的检查记为 `SKIP`。
 
+## 真实 Agent 对照实验
+
+使用 `npm run eval:agent:smoke` 检查 A/B/C 运行基建，模拟数据不会计入真实指标。真实运行前固定源码 commit、模型版本和独立验收脚本，见 [实验指南](benchmarks/agent-eval/README.md)。
+
 ## 开发与测试
 
 ```sh
