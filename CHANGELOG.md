@@ -4,13 +4,17 @@
 
 ### Added
 
-- GitHub Workflow、Issue、PR、Changelog 预设模板和已有项目优先的接入规则。
-- 新增 github check 与隔离的 GitHub 回归场景。
+- v0.8.0 existing-repository adoption protocol with `adopt scan`, `plan`, `apply`, `activate`, `verify`, and `reconcile`.
+- Original project rule fingerprinting, explicit approval and review reason, guarded AGENTS.md bridge, and documented precedence.
+- Adoption Eval covering stale plans, original file preservation, symlinks, rule drift, and idempotence.
+
+- GitHub 协作规范模块，包含完整的 Issue/PR/Workflow/Changelog 模板。
+- 已有仓库优先策略，以及 `agentrepo github check` 和 GitHub 模板回归测试。
 
 ### Fixed
 
-- 避免重复生成其他支持路径上的 PR 模板。
-- 避免接手已有仓库时自动激活新 Workflow。
+- 避免已有项目使用其他受支持路径的 PR 模板时重复生成。
+- 避免在已有项目中默认激活新的 CI Workflow。
 
 ## v0.6.0 · 2026-11-15
 

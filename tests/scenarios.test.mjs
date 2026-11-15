@@ -9,8 +9,8 @@ const write=(root,p,txt)=>{fs.mkdirSync(path.dirname(path.join(root,p)),{recursi
 test('regression corpus runs all isolated scenarios including the npm documentation error',t=>{
   const root=fixture(t);doInit(root);
   const report=scenarioEval(path.join(root,'eval/scenarios.json'));
-  assert.equal(report.total,8);
-  assert.equal(report.passed,8,JSON.stringify(report.results.filter(x=>!x.passed)));
+  assert.equal(report.total,10);
+  assert.equal(report.passed,10,JSON.stringify(report.results.filter(x=>!x.passed)));
 });
 test('scenario runner refuses path traversal in untrusted fixtures',t=>{
   const root=fixture(t),cases={schemaVersion:1,cases:[{id:'escape',files:{'../evil.txt':'pwn'},steps:[{action:'init',expect:true}]}]};

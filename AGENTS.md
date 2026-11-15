@@ -9,6 +9,7 @@ This repository contains AgentRepo Kit itself, a Node.js CLI that generates agen
 - `README.md` describes user-facing behavior and supported commands.
 - `docs/ARCHITECTURE.zh-CN.md` explains the current implementation.
 - `docs/EVAL.zh-CN.md` defines the evaluation contract.
+- `docs/ADOPTION.zh-CN.md` defines existing-project takeover and precedence.
 - `reports/ROUND6.zh-CN.md` documents the last recorded validation and outstanding gaps.
 
 ## Commands
@@ -20,7 +21,7 @@ This repository contains AgentRepo Kit itself, a Node.js CLI that generates agen
 
 ## Working rules
 
-1. When adopting projects, respect existing GitHub workflows, templates and changelogs before adding fallbacks.
+1. On adopting existing repositories, original Workflow, Issue, PR, Changelog and AGENTS policies take precedence. Never add competing templates.
 2. Preserve compatibility with Node.js 20 and the existing CLI command names.
 2. Initializing an existing repository must not overwrite user-managed files.
 3. Never invent dependency edges or treat a skipped check as passed.

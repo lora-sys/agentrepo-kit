@@ -4,7 +4,7 @@
 
 AgentRepo Kit 是一套可接入新项目和已有仓库的 Node.js 命令行脚手架。它提供已经写好的开发规则、清晰的待确认占位符、可视化架构 HTML、可执行的仓库检查，以及保留失败案例的 Eval。
 
-> 当前版本为 `v0.7.0`，需要 Node.js 20 或更高版本。CLI 本体不依赖第三方 npm 运行时包。
+> 当前版本为 `v0.8.0`，需要 Node.js 20 或更高版本。CLI 本体不依赖第三方 npm 运行时包。
 >
 > 项目仍处于实验阶段。脚手架的自动化测试不能等同于真实 Coding Agent 的开发成功率。
 
@@ -26,7 +26,7 @@ AgentRepo Kit 是一套可接入新项目和已有仓库的 Node.js 命令行脚
 
 | 能力 | 对应机制 |
 | --- | --- |
-| 一次初始化 | 同时支持空项目和已有项目，保留原有文件，可预览改动 |
+| 一次初始化 | 空项目带完整 GitHub 规范；已有项目优先保留现有 CI、Issue、PR 和 Changelog，可预览改动 |
 | Agent 入口 | 简短 `AGENTS.md`，把详细规则和项目知识留在仓库中 |
 | 代码定位 | 生成文件索引并按任务描述返回相关源码路径 |
 | 架构可视化 | 生成自包含 `docs/architecture.html`，支持搜索和依赖查看 |
@@ -56,10 +56,13 @@ my-project/
 │   └── tasks.json
 └── .agentrepo/
     ├── cli.mjs
+    ├── adoption.mjs
     └── architecture-template.html
 ```
 
-初始化仅添加缺失文件。已有的 README、AGENTS 和自定义架构 HTML 不会被覆盖。
+初始化仅添加缺失文件。已有的 README、AGENTS、自定义架构 HTML、GitHub 工作流和同类模板都不会被覆盖。已有项目默认不新增 Workflow，需显式使用 `init --github-workflow`。
+
+初始化会提供 `docs/github.md` 和 GitHub 模板，运行 `agentrepo github check` 可以核对现有 Workflow、Issue、PR 和 Changelog。
 
 ## 五分钟开始
 
@@ -95,12 +98,46 @@ node .agentrepo/cli.mjs arch view --write
 
 生成的依赖线只来自真实分析结果。如果分析器未安装，只展示文件和模块列表，不虚构依赖。其他语言不会被强制执行 JavaScript 架构检查。
 
+## 已有仓库正式接入
+
+**已有项目不是执行一次 `init` 就完成规则接管。** 先发现原项目规则，保存可审查的计划，明确批准新增和短入口，最后核验原规则未被覆盖。
+
+```sh
+cd existing-project
+agentrepo adopt scan
+agentrepo adopt plan --write
+agentrepo adopt apply --approve
+agentrepo adopt activate --approve --reason "已阅读并核对现有 AGENTS.md 及相关工程约束"
+agentrepo adopt verify
+```
+
+原有 `AGENTS.md`、Claude/Cursor 规则、Workflow、PR/Issue 和 Changelog 优先。CLI 不会覆盖它们，短入口需要明确批准。`adopt verify` 只证明接入机制完整，不代替原项目测试和真实 Agent Eval。
+
+[查看完整接入规范](docs/ADOPTION.zh-CN.md)。
+
+## GitHub 协作模板
+
+空仓库附带 CI Workflow、Bug/Feature Issue Forms、PR 检查清单和 Keep a Changelog 的 `Unreleased` 结构。接入已有项目会先查找 GitHub 支持的其他模板位置和已有的 Changelog 文件名，不覆盖也不创建重复的模板。已有仓库默认不激活新 CI。
+
+```sh
+agentrepo github check
+agentrepo init ./existing-project --dry-run
+# 确认项目无现有 CI 且确实需要时，再显式开启
+agentrepo init ./existing-project --github-workflow
+```
+
 ## CLI 命令
 
 | 命令 | 作用 |
 | --- | --- |
 | `agentrepo init [dir] --dry-run` | 预览将创建的文件 |
 | `agentrepo init [dir]` | 安全初始化项目 |
+| `agentrepo adopt scan` | 只读识别原项目规则及指纹 |
+| `agentrepo adopt plan --write` | 保存正式接入计划 |
+| `agentrepo adopt apply --approve` | 审核后仅补充缺失文件 |
+| `agentrepo adopt activate --approve --reason ...` | 追加原规则优先的可审查入口 |
+| `agentrepo adopt verify` | 检查规则漂移、接入状态和剩余人工确认项 |
+| `agentrepo adopt reconcile --approve --reason ...` | 经复核后更新原规则基线 |
 | `agentrepo doctor` | 检查项目环境和待确认项 |
 | `agentrepo map --check` | 检查代码索引是否过期 |
 | `agentrepo locate "任务描述" --k 3` | 定位可能相关的源码文件 |
@@ -131,20 +168,9 @@ npm pack --dry-run
 
 ## 项目状态与许可
 
-- 当前代码：`v0.7.0`，已经完成 CLI 测试、基础架构 HTML 和内部回归检查。
+- 当前代码：`v0.8.0`，已经完成 CLI 测试、基础架构 HTML 和内部回归检查。
 - 尚未完成：多模型真实编程 A/B 评估、第三方分析器完整联网集成、浏览器截图视觉验收。
 - 已知局限：当前源码定位主要使用轻量词法方法，大型多语言单仓库还需要更广泛评估。
 - 开源协议：[MIT](LICENSE)。第三方评测项目源代码不随本仓库分发。
 
 [更新记录](CHANGELOG.md) · [GitHub 发布说明](docs/PUBLISHING.zh-CN.md) · [安全说明](SECURITY.md) · [行为准则](CODE_OF_CONDUCT.md)
-
-## GitHub 协作规范与已有仓库优先级
-
-空仓库会生成 Issue Forms、PR 模板、Changelog 和只读权限的静态 Workflow。已有项目优先保留自己的规则，并检查 GitHub 允许的其他模板路径和历史文件名。已有仓库默认不会启用新的 CI Workflow。
-
-```sh
-agentrepo github check
-agentrepo init ./existing-project --dry-run
-# 明确决定新增 CI 时才使用
-agentrepo init ./existing-project --github-workflow
-```
