@@ -167,7 +167,7 @@ function buildArchitectureData(root,opts={}){
   return {schemaVersion:1,project:path.basename(root),fileCount:files.length,
     fingerprint:sourceFingerprint(root),mode:cruise?'dependency-cruiser':'inventory',modules,edges};
 }
-function architectureTemplate(){return fs.readFileSync(new URL('./architecture-template.html',import.meta.url),'utf8');}
+function architectureTemplate(){const asset=new URL('./architecture-template.html',import.meta.url);if(!fs.existsSync(asset))throw new Error('Architecture HTML is unavailable in the minimal bundle; use the full AgentRepo CLI.');return fs.readFileSync(asset,'utf8');}
 function renderArchitectureHtml(root,opts={}){
   const data=buildArchitectureData(root,opts);
   const html=architectureTemplate().replace('__SOURCE_HASH__',data.fingerprint)
@@ -352,7 +352,23 @@ Track user-visible changes in [Keep a Changelog](https://keepachangelog.com/en/1
 function template(root,opts={}) {
   const d=detect(root);const docsRulePaths=[...new Set([...d.sourceRoots.filter(p=>p!=='.'&&!['test','tests','scripts','utils'].includes(p)).map(p=>`${p}/**`),'*.sh','*.bash','*.zsh','*.js','*.ts','*.py','*.go','nvm-exec','bash_completion','Makefile','Dockerfile'])];
   const cfg={version:2,project:path.basename(path.resolve(root)),stack:d.stack,sourceRoots:d.sourceRoots,commands:d.commands,architecture:{forbiddenImports:[]},docRules:[{id:'architecture',doc:'docs/architecture.md',watch:docsRulePaths}],requiredChecks:[]};
-  if(opts.minimal){cfg.profile='minimal';cfg.docRules=[];}
+  if(opts.minimal){
+    if(opts.arch)throw new Error('Architecture setup is not included in --minimal; use the full CLI.');
+    cfg.profile='minimal';cfg.docRules=[];
+    const minimalAgents="# Agent entry\n\n1. Read original project instructions and task-relevant files first.\n2. Use `node .agentrepo/cli.mjs locate \"keywords\"` to find code; confirm callers and tests before edits.\n3. Keep changes within task scope. Preserve public contracts and existing CI.\n4. Run `node .agentrepo/cli.mjs verify --require test` and `node .agentrepo/cli.mjs docs check --strict`. Report PASS, FAIL, and SKIP separately.\n5. Never expose secrets, fabricate results, or overwrite project-owned configuration.\n\nCommands are configured in `agentrepo.json.commands`. See `docs/development.md`.\n";
+    const minimalDev="# Development\n\n- Commands: `agentrepo.json.commands`\n- Find code: `node .agentrepo/cli.mjs locate \"keywords\"`\n- Check environment: `node .agentrepo/cli.mjs doctor`\n- Verify: `node .agentrepo/cli.mjs verify --require test`\n- Check docs and map: `node .agentrepo/cli.mjs docs check --strict`\n\nMissing project commands return SKIP. Required test checks return FAIL. Do not invent setup or test commands.\n";
+    return {
+      'agentrepo.json':json(cfg),
+      'AGENTS.md':minimalAgents,
+      'docs/code-map.md':mapText(root),
+      'docs/development.md':minimalDev,
+      '.agentrepo/cli.mjs':fs.readFileSync(fileURLToPath(import.meta.url),'utf8'),
+      '.agentrepo/adoption.mjs':fs.readFileSync(new URL('./adoption.mjs',import.meta.url),'utf8'),
+      '.agentrepo/.gitignore':'cache/\nreports/\n'
+    };
+  }
+  if(!fs.existsSync(new URL('./architecture-template.html',import.meta.url)))
+    throw new Error('Full initialization requires architecture-template.html. Use init --minimal or install the full AgentRepo CLI.');
   const files={
     'README.md':`# ${path.basename(path.resolve(root))}
 
@@ -480,7 +496,8 @@ Read argv arrays from \`agentrepo.json\`; do not infer missing commands. Unconfi
       {id:'AR-014',cause:'Keeping existing AGENTS.md did not provide an explicit rule adoption process',guard:'tests/adoption.test.mjs: approved activation and original policy preservation',status:'fixed'},
       {id:'AR-015',cause:'After adoption, changed original rules could silently invalidate the claimed configuration',guard:'tests/adoption.test.mjs: fingerprint detection and explicit reconcile',status:'fixed'},
       {id:'AR-016',cause:'Verification could pass while required project context was unresolved',guard:'tests/template-contract.test.mjs: unresolved placeholders cause verify FAIL',status:'fixed'},
-      {id:'AR-017',cause:'Generated architecture and development docs had non-executable prose and an invalid module table placeholder row',guard:'tests/content-quality.test.mjs: typed contract tables and real command argv',status:'fixed'}
+      {id:'AR-017',cause:'Generated architecture and development docs had non-executable prose and an invalid module table placeholder row',guard:'tests/content-quality.test.mjs: typed contract tables and real command argv',status:'fixed'},
+      {id:'AR-018',cause:'Minimal bundled CLI attempted to read missing architecture-template.html before profile selection and failed on reinitialization or adopt apply',guard:'tests/minimal-init.test.mjs: bundled reinit, adopt apply and full-only errors',status:'fixed'}
     ]}),
     'eval/scenarios.json':json({schemaVersion:1,cases:DEFAULT_SCENARIOS}),
     'eval/regressions.json':json({schemaVersion:1,cases:[
@@ -495,19 +512,6 @@ Read argv arrays from \`agentrepo.json\`; do not infer missing commands. Unconfi
     '.agentrepo/.gitignore':'cache/\nreports/\n',
 
   };
-  if(opts.minimal){
-    const minimalAgents="# Agent entry\n\n1. Read original project instructions and task-relevant files first.\n2. Use `node .agentrepo/cli.mjs locate \"keywords\"` to find code; confirm callers and tests before edits.\n3. Keep changes within task scope. Preserve public contracts and existing CI.\n4. Run `node .agentrepo/cli.mjs verify --require test` and `node .agentrepo/cli.mjs docs check --strict`. Report PASS, FAIL, and SKIP separately.\n5. Never expose secrets, fabricate results, or overwrite project-owned configuration.\n\nCommands are configured in `agentrepo.json.commands`. See `docs/development.md`.\n";
-    const minimalDev="# Development\n\n- Commands: `agentrepo.json.commands`\n- Find code: `node .agentrepo/cli.mjs locate \"keywords\"`\n- Check environment: `node .agentrepo/cli.mjs doctor`\n- Verify: `node .agentrepo/cli.mjs verify --require test`\n- Check docs and map: `node .agentrepo/cli.mjs docs check --strict`\n\nMissing project commands return SKIP. Required test checks return FAIL. Do not invent setup or test commands.\n";
-    return {
-      'agentrepo.json':json(cfg),
-      'AGENTS.md':minimalAgents,
-      'docs/code-map.md':files['docs/code-map.md'],
-      'docs/development.md':minimalDev,
-      '.agentrepo/cli.mjs':files['.agentrepo/cli.mjs'],
-      '.agentrepo/adoption.mjs':files['.agentrepo/adoption.mjs'],
-      '.agentrepo/.gitignore':files['.agentrepo/.gitignore']
-    };
-  }
   return {...files,...githubTemplateFiles(root,opts)};
 }
 function doInit(root, opts={}) {
@@ -876,7 +880,7 @@ function runCLI(tokens,root=process.cwd()){
     const target=path.resolve(root,rest[0]||'.');
     if(sub==='scan')return adoptScan(target);
     if(sub==='plan')return adoptPlan(target,opts);
-    if(sub==='apply')return adoptApply(target,opts,doInit);
+    if(sub==='apply')return adoptApply(target,opts,dir=>doInit(dir,{minimal:!fs.existsSync(new URL('./architecture-template.html',import.meta.url))}));
     if(sub==='activate')return adoptActivate(target,opts);
     if(sub==='verify')return adoptVerify(target,opts,placeholderStatus,doDoctor);
     if(sub==='reconcile')return adoptReconcile(target,opts);
