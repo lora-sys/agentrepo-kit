@@ -2,7 +2,7 @@
 
 为代码库生成 Agent 规则、交互式架构图、验证命令和 Eval。新仓库使用完整模板，已有仓库保留原规则并补齐缺失能力。
 
-Node.js 20+ · v0.8.1 · MIT。CLI 无第三方 npm 运行时依赖，尚未发布到 npm Registry。
+Node.js 20+ · v0.9.0 · MIT。CLI 无第三方 npm 运行时依赖，尚未发布到 npm Registry。
 
 [English](README.en.md) · [完整用法](docs/USAGE.zh-CN.md) · [接入已有仓库](docs/ADOPTION.zh-CN.md) · [架构](docs/ARCHITECTURE.zh-CN.md) · [Eval](docs/EVAL.zh-CN.md) · [架构 HTML 示例](examples/architecture-demo.html)
 

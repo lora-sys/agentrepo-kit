@@ -2,7 +2,7 @@
 
 A Node.js CLI that adds agent instructions, architecture visualization, verification commands, and replayable evals to repositories. New projects receive a complete template; existing projects retain their own rules.
 
-Requires Node.js 20+. Current version: v0.8.1. MIT license. No third-party runtime dependencies. Not published to the npm Registry.
+Requires Node.js 20+. Current version: v0.9.0. MIT license. No third-party runtime dependencies. Not published to the npm Registry.
 
 [中文说明](README.md) · [Usage](docs/USAGE.zh-CN.md) · [Adoption](docs/ADOPTION.zh-CN.md) · [Architecture](docs/ARCHITECTURE.zh-CN.md) · [Evals](docs/EVAL.zh-CN.md)
 

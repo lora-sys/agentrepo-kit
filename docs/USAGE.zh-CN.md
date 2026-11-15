@@ -46,7 +46,7 @@ node .agentrepo/cli.mjs verify --require test
 node .agentrepo/cli.mjs eval run
 ```
 
-在 `agentrepo.json` 的 `commands` 中配置项目命令，采用 argv 数组，例如 `"test": ["npm", "test"]`。`verify --require test` 要求测试实际运行且成功；未配置的非必需检查记为 `SKIP`。
+在 `agentrepo.json` 的 `commands` 中配置项目命令，采用 argv 数组，例如 `"test": ["npm", "test"]`。`verify` 发现待确认占位符时返回 `FAIL`；`--require test` 要求测试实际运行且成功。非必需且未配置的检查记为 `SKIP`。
 
 ## 架构依赖与 HTML
 
