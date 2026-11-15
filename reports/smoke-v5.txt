@@ -1,0 +1,26 @@
+
+> agentrepo-kit@0.5.0 eval:smoke
+> node benchmarks/smoke.mjs
+
+{
+  "ok": true,
+  "scenarios": {
+    "passed": 6,
+    "total": 6
+  },
+  "dream": {
+    "passed": 11,
+    "total": 11
+  },
+  "audit": {
+    "matrix": {
+      "tp": 7,
+      "tn": 7,
+      "fp": 0,
+      "fn": 0
+    },
+    "precision": 1,
+    "recall": 1
+  },
+  "notice": "No real model tokens or autonomous coding trials were measured."
+}

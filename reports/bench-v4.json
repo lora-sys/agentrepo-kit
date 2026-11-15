@@ -1,0 +1,664 @@
+{
+  "schemaVersion": 2,
+  "kitVersion": "0.4.0",
+  "date": "2026-11-15T08:08:33.675Z",
+  "sourceLocation": "/mnt/data/agentrepo-bench/sources",
+  "sourceNotes": "Source snapshots are third-party code; not the complete Git history. See versions and source hashes.",
+  "projects": [
+    {
+      "name": "novnc",
+      "version": "1.5.0",
+      "sourceFiles": 98,
+      "originalFiles": 207,
+      "sourceHashSha256": "7331288fcbabc5c97999b9f316d70a9a6d18bb8f899ae9fd571e2d32de6a2359",
+      "originalFilesUnchanged": true,
+      "sourceUnchanged": true,
+      "added": 14,
+      "preserved": true,
+      "doctor": true,
+      "docs": true,
+      "regression": {
+        "passed": 3,
+        "total": 3
+      },
+      "dev": {
+        "n": 6,
+        "filenameTop3": 3,
+        "enhancedTop1": 5,
+        "enhancedTop3": 6
+      },
+      "test": {
+        "n": 4,
+        "filenameTop3": 3,
+        "enhancedTop1": 3,
+        "enhancedTop3": 4
+      },
+      "records": [
+        {
+          "id": "novnc-01",
+          "split": "dev",
+          "query": "WebSocket transport receive send data buffering",
+          "expected": "core/websock.js",
+          "baselineRank": null,
+          "rank": 1,
+          "baselineHit3": false,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 1976,
+          "targetedContextBytes": 1081,
+          "top3": [
+            "core/websock.js",
+            "core/rfb.js",
+            "app/ui.js"
+          ]
+        },
+        {
+          "id": "novnc-02",
+          "split": "dev",
+          "query": "recognize touch gestures swipe pinch movement",
+          "expected": "core/input/gesturehandler.js",
+          "baselineRank": null,
+          "rank": 1,
+          "baselineHit3": false,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 1976,
+          "targetedContextBytes": 1094,
+          "top3": [
+            "core/input/gesturehandler.js",
+            "core/rfb.js",
+            "app/ui.js"
+          ]
+        },
+        {
+          "id": "novnc-03",
+          "split": "dev",
+          "query": "keyboard key events translate key input",
+          "expected": "core/input/keyboard.js",
+          "baselineRank": 3,
+          "rank": 1,
+          "baselineHit3": true,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 1976,
+          "targetedContextBytes": 1096,
+          "top3": [
+            "core/input/keyboard.js",
+            "core/util/events.js",
+            "app/ui.js"
+          ]
+        },
+        {
+          "id": "novnc-04",
+          "split": "dev",
+          "query": "decode ZRLE pixel rectangles",
+          "expected": "core/decoders/zrle.js",
+          "baselineRank": 2,
+          "rank": 1,
+          "baselineHit3": true,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 1976,
+          "targetedContextBytes": 1102,
+          "top3": [
+            "core/decoders/zrle.js",
+            "core/rfb.js",
+            "core/decoders/hextile.js"
+          ]
+        },
+        {
+          "id": "novnc-05",
+          "split": "dev",
+          "query": "Web application interface control clipboard button",
+          "expected": "app/ui.js",
+          "baselineRank": null,
+          "rank": 1,
+          "baselineHit3": false,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 1976,
+          "targetedContextBytes": 1086,
+          "top3": [
+            "app/ui.js",
+            "core/rfb.js",
+            "core/input/keysym.js"
+          ]
+        },
+        {
+          "id": "novnc-06",
+          "split": "dev",
+          "query": "localization translate UI texts languages",
+          "expected": "app/localization.js",
+          "baselineRank": 2,
+          "rank": 2,
+          "baselineHit3": true,
+          "hit1": false,
+          "hit3": true,
+          "naiveManifestBytes": 1976,
+          "targetedContextBytes": 1082,
+          "top3": [
+            "app/ui.js",
+            "app/localization.js",
+            "vnc.html"
+          ]
+        },
+        {
+          "id": "novnc-07",
+          "split": "test",
+          "query": "remote frame buffer security authentication handshake",
+          "expected": "core/rfb.js",
+          "baselineRank": null,
+          "rank": 1,
+          "baselineHit3": false,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 1976,
+          "targetedContextBytes": 1081,
+          "top3": [
+            "core/rfb.js",
+            "app/ui.js",
+            "core/display.js"
+          ]
+        },
+        {
+          "id": "novnc-08",
+          "split": "test",
+          "query": "draw screen frame buffer resize display",
+          "expected": "core/display.js",
+          "baselineRank": 1,
+          "rank": 1,
+          "baselineHit3": true,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 1976,
+          "targetedContextBytes": 1096,
+          "top3": [
+            "core/display.js",
+            "core/rfb.js",
+            "core/decoders/hextile.js"
+          ]
+        },
+        {
+          "id": "novnc-09",
+          "split": "test",
+          "query": "encrypt data with AES cryptographic cipher",
+          "expected": "core/crypto/aes.js",
+          "baselineRank": 1,
+          "rank": 1,
+          "baselineHit3": true,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 1976,
+          "targetedContextBytes": 1096,
+          "top3": [
+            "core/crypto/aes.js",
+            "core/ra2.js",
+            "core/crypto/crypto.js"
+          ]
+        },
+        {
+          "id": "novnc-10",
+          "split": "test",
+          "query": "translate browser mouse key codes into keysym",
+          "expected": "core/input/keysym.js",
+          "baselineRank": 1,
+          "rank": 2,
+          "baselineHit3": true,
+          "hit1": false,
+          "hit3": true,
+          "naiveManifestBytes": 1976,
+          "targetedContextBytes": 1095,
+          "top3": [
+            "app/ui.js",
+            "core/input/keysym.js",
+            "core/util/browser.js"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "nvm",
+      "version": "0.40.3",
+      "sourceFiles": 315,
+      "originalFiles": 346,
+      "sourceHashSha256": "5c058ae9b102abc94f2351302d37776ebe12f04ddc233bfdabe70fe70cf2354d",
+      "originalFilesUnchanged": true,
+      "sourceUnchanged": true,
+      "added": 14,
+      "preserved": true,
+      "doctor": true,
+      "docs": true,
+      "regression": {
+        "passed": 3,
+        "total": 3
+      },
+      "dev": {
+        "n": 6,
+        "filenameTop3": 0,
+        "enhancedTop1": 5,
+        "enhancedTop3": 5
+      },
+      "test": {
+        "n": 4,
+        "filenameTop3": 1,
+        "enhancedTop1": 3,
+        "enhancedTop3": 4
+      },
+      "records": [
+        {
+          "id": "nvm-01",
+          "split": "dev",
+          "query": "shell profile detection installer configuration",
+          "expected": "install.sh",
+          "baselineRank": null,
+          "rank": 1,
+          "baselineHit3": false,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 16202,
+          "targetedContextBytes": 1100,
+          "top3": [
+            "install.sh",
+            "nvm.sh",
+            "test/install_script/nvm_detect_profile"
+          ]
+        },
+        {
+          "id": "nvm-02",
+          "split": "dev",
+          "query": "nvm version command alias switching",
+          "expected": "nvm.sh",
+          "baselineRank": null,
+          "rank": 1,
+          "baselineHit3": false,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 16202,
+          "targetedContextBytes": 1075,
+          "top3": [
+            "nvm.sh",
+            "nvm-exec",
+            "bash_completion"
+          ]
+        },
+        {
+          "id": "nvm-03",
+          "split": "dev",
+          "query": "shell completion for nvm commands and aliases",
+          "expected": "bash_completion",
+          "baselineRank": null,
+          "rank": 1,
+          "baselineHit3": false,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 16202,
+          "targetedContextBytes": 1075,
+          "top3": [
+            "bash_completion",
+            "nvm.sh",
+            "nvm-exec"
+          ]
+        },
+        {
+          "id": "nvm-04",
+          "split": "dev",
+          "query": "execute a command with configured node version",
+          "expected": "nvm-exec",
+          "baselineRank": null,
+          "rank": 4,
+          "baselineHit3": false,
+          "hit1": false,
+          "hit3": false,
+          "naiveManifestBytes": 16202,
+          "targetedContextBytes": 1077,
+          "top3": [
+            "nvm.sh",
+            "install.sh",
+            "bash_completion"
+          ]
+        },
+        {
+          "id": "nvm-05",
+          "split": "dev",
+          "query": "install nvm directory choose profile",
+          "expected": "install.sh",
+          "baselineRank": null,
+          "rank": 1,
+          "baselineHit3": false,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 16202,
+          "targetedContextBytes": 1070,
+          "top3": [
+            "install.sh",
+            "nvm.sh",
+            "nvm-exec"
+          ]
+        },
+        {
+          "id": "nvm-06",
+          "split": "dev",
+          "query": "NVM_DIR environment variables version resolve",
+          "expected": "nvm.sh",
+          "baselineRank": null,
+          "rank": 1,
+          "baselineHit3": false,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 16202,
+          "targetedContextBytes": 1070,
+          "top3": [
+            "nvm.sh",
+            "nvm-exec",
+            "install.sh"
+          ]
+        },
+        {
+          "id": "nvm-07",
+          "split": "test",
+          "query": "install script downloading nvm repository",
+          "expected": "install.sh",
+          "baselineRank": null,
+          "rank": 1,
+          "baselineHit3": false,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 16202,
+          "targetedContextBytes": 1070,
+          "top3": [
+            "install.sh",
+            "nvm.sh",
+            "nvm-exec"
+          ]
+        },
+        {
+          "id": "nvm-08",
+          "split": "test",
+          "query": "bash completion command suggestions for flags",
+          "expected": "bash_completion",
+          "baselineRank": 1,
+          "rank": 1,
+          "baselineHit3": true,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 16202,
+          "targetedContextBytes": 1077,
+          "top3": [
+            "bash_completion",
+            "nvm.sh",
+            "install.sh"
+          ]
+        },
+        {
+          "id": "nvm-09",
+          "split": "test",
+          "query": "running nvm executable in subshell",
+          "expected": "nvm-exec",
+          "baselineRank": null,
+          "rank": 2,
+          "baselineHit3": false,
+          "hit1": false,
+          "hit3": true,
+          "naiveManifestBytes": 16202,
+          "targetedContextBytes": 1068,
+          "top3": [
+            "nvm.sh",
+            "nvm-exec",
+            "Makefile"
+          ]
+        },
+        {
+          "id": "nvm-10",
+          "split": "test",
+          "query": "implement LTS aliases and select node version",
+          "expected": "nvm.sh",
+          "baselineRank": null,
+          "rank": 1,
+          "baselineHit3": false,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 16202,
+          "targetedContextBytes": 1077,
+          "top3": [
+            "nvm.sh",
+            "install.sh",
+            "bash_completion"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "npm",
+      "version": "10.9.2",
+      "sourceFiles": 114,
+      "originalFiles": 294,
+      "sourceHashSha256": "e163ec1f5a0711e6b79ed1f2710a6ab9c068c45db74e9fbb2682fb48177a3fd5",
+      "originalFilesUnchanged": true,
+      "sourceUnchanged": true,
+      "added": 14,
+      "preserved": true,
+      "doctor": true,
+      "docs": false,
+      "regression": {
+        "passed": 2,
+        "total": 3
+      },
+      "dev": {
+        "n": 6,
+        "filenameTop3": 2,
+        "enhancedTop1": 3,
+        "enhancedTop3": 5
+      },
+      "test": {
+        "n": 4,
+        "filenameTop3": 1,
+        "enhancedTop1": 3,
+        "enhancedTop3": 4
+      },
+      "records": [
+        {
+          "id": "npm-01",
+          "split": "dev",
+          "query": "install a package dependency into local project",
+          "expected": "lib/commands/install.js",
+          "baselineRank": 3,
+          "rank": 1,
+          "baselineHit3": true,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 2614,
+          "targetedContextBytes": 1119,
+          "top3": [
+            "lib/commands/install.js",
+            "lib/package-url-cmd.js",
+            "lib/commands/install-test.js"
+          ]
+        },
+        {
+          "id": "npm-02",
+          "split": "dev",
+          "query": "check vulnerability audit dependency report",
+          "expected": "lib/commands/audit.js",
+          "baselineRank": 1,
+          "rank": 1,
+          "baselineHit3": true,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 2614,
+          "targetedContextBytes": 1117,
+          "top3": [
+            "lib/commands/audit.js",
+            "lib/utils/audit-error.js",
+            "lib/utils/error-message.js"
+          ]
+        },
+        {
+          "id": "npm-03",
+          "split": "dev",
+          "query": "configuration command set get registry value",
+          "expected": "lib/commands/config.js",
+          "baselineRank": null,
+          "rank": 3,
+          "baselineHit3": false,
+          "hit1": false,
+          "hit3": true,
+          "naiveManifestBytes": 2614,
+          "targetedContextBytes": 1106,
+          "top3": [
+            "lib/commands/set.js",
+            "lib/commands/get.js",
+            "lib/commands/config.js"
+          ]
+        },
+        {
+          "id": "npm-04",
+          "split": "dev",
+          "query": "exit handling error after npm CLI fails",
+          "expected": "lib/cli/exit-handler.js",
+          "baselineRank": null,
+          "rank": 4,
+          "baselineHit3": false,
+          "hit1": false,
+          "hit3": false,
+          "naiveManifestBytes": 2614,
+          "targetedContextBytes": 1096,
+          "top3": [
+            "lib/utils/error-message.js",
+            "bin/npm-cli.js",
+            "lib/npm.js"
+          ]
+        },
+        {
+          "id": "npm-05",
+          "split": "dev",
+          "query": "map workspaces list all package locations",
+          "expected": "lib/utils/get-workspaces.js",
+          "baselineRank": 4,
+          "rank": 1,
+          "baselineHit3": false,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 2614,
+          "targetedContextBytes": 1115,
+          "top3": [
+            "lib/utils/get-workspaces.js",
+            "lib/commands/ls.js",
+            "lib/commands/outdated.js"
+          ]
+        },
+        {
+          "id": "npm-06",
+          "split": "dev",
+          "query": "npm CLI shell tab command completion",
+          "expected": "lib/commands/completion.js",
+          "baselineRank": null,
+          "rank": 2,
+          "baselineHit3": false,
+          "hit1": false,
+          "hit3": true,
+          "naiveManifestBytes": 2614,
+          "targetedContextBytes": 1100,
+          "top3": [
+            "bin/npm-cli.js",
+            "lib/commands/completion.js",
+            "bin/npx-cli.js"
+          ]
+        },
+        {
+          "id": "npm-07",
+          "split": "test",
+          "query": "remove stale entries npm cache clean",
+          "expected": "lib/commands/cache.js",
+          "baselineRank": 5,
+          "rank": 1,
+          "baselineHit3": false,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 2614,
+          "targetedContextBytes": 1093,
+          "top3": [
+            "lib/commands/cache.js",
+            "lib/npm.js",
+            "lib/cli/entry.js"
+          ]
+        },
+        {
+          "id": "npm-08",
+          "split": "test",
+          "query": "authenticate registry with npm login",
+          "expected": "lib/commands/login.js",
+          "baselineRank": 4,
+          "rank": 1,
+          "baselineHit3": false,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 2614,
+          "targetedContextBytes": 1094,
+          "top3": [
+            "lib/commands/login.js",
+            "lib/npm.js",
+            "bin/npm-prefix.js"
+          ]
+        },
+        {
+          "id": "npm-09",
+          "split": "test",
+          "query": "publish package tarball to registry",
+          "expected": "lib/commands/publish.js",
+          "baselineRank": 3,
+          "rank": 1,
+          "baselineHit3": true,
+          "hit1": true,
+          "hit3": true,
+          "naiveManifestBytes": 2614,
+          "targetedContextBytes": 1111,
+          "top3": [
+            "lib/commands/publish.js",
+            "lib/package-url-cmd.js",
+            "lib/commands/view.js"
+          ]
+        },
+        {
+          "id": "npm-10",
+          "split": "test",
+          "query": "npm CLI initial boot sequence entry point",
+          "expected": "lib/cli/entry.js",
+          "baselineRank": 5,
+          "rank": 2,
+          "baselineHit3": false,
+          "hit1": false,
+          "hit3": true,
+          "naiveManifestBytes": 2614,
+          "targetedContextBytes": 1090,
+          "top3": [
+            "bin/npm-cli.js",
+            "lib/cli/entry.js",
+            "bin/npx-cli.js"
+          ]
+        }
+      ]
+    }
+  ],
+  "description": "Independent CLI/scaffold and source-path localization evaluations. No model execution and no measured model tokens.",
+  "totals": {
+    "cases": 30,
+    "devCases": 18,
+    "heldoutCases": 12,
+    "devTop3": 16,
+    "heldoutTop3": 12,
+    "heldoutTop1": 9,
+    "baselineTop3": 10,
+    "enhancedTop3": 28,
+    "enhancedTop1": 22,
+    "baselineTop3Rate": 0.3333333333333333,
+    "enhancedTop3Rate": 0.9333333333333333,
+    "enhancedTop1Rate": 0.7333333333333333,
+    "structuralPassed": 8,
+    "structuralTotal": 9,
+    "sourcePreserved": true,
+    "naiveManifestBytesMean": 6931,
+    "targetedContextBytesMean": 1090,
+    "contextBytesChange": 0.8427355359976916,
+    "contextNote": "Bytes compare a full filename manifest versus AGENTS.md plus top-3 file paths, not comparable model input tokens. This is not a token reduction measurement."
+  }
+}

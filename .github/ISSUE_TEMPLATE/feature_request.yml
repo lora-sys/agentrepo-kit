@@ -1,0 +1,21 @@
+name: Feature request
+description: Suggest a small, testable improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 目前遇到的具体问题
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: 希望达到的可验证结果
+    validations:
+      required: true
+  - type: textarea
+    id: eval
+    attributes:
+      label: 如何用 Eval 证明改动有效
+      description: 给出可复现的测试场景，或说明为什么需要真实 Agent 实验。

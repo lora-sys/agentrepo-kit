@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "method": "Ground truth is a source path checked against the local repository snapshot. These are code-location tasks, not coding success tests.",
+  "cases": [
+    {"id":"novnc-01","project":"novnc","split":"dev","query":"WebSocket transport receive send data buffering","expected":"core/websock.js"},
+    {"id":"novnc-02","project":"novnc","split":"dev","query":"recognize touch gestures swipe pinch movement","expected":"core/input/gesturehandler.js"},
+    {"id":"novnc-03","project":"novnc","split":"dev","query":"keyboard key events translate key input","expected":"core/input/keyboard.js"},
+    {"id":"novnc-04","project":"novnc","split":"dev","query":"decode ZRLE pixel rectangles","expected":"core/decoders/zrle.js"},
+    {"id":"novnc-05","project":"novnc","split":"dev","query":"Web application interface control clipboard button","expected":"app/ui.js"},
+    {"id":"novnc-06","project":"novnc","split":"dev","query":"localization translate UI texts languages","expected":"app/localization.js"},
+    {"id":"novnc-07","project":"novnc","split":"test","query":"remote frame buffer security authentication handshake","expected":"core/rfb.js"},
+    {"id":"novnc-08","project":"novnc","split":"test","query":"draw screen frame buffer resize display","expected":"core/display.js"},
+    {"id":"novnc-09","project":"novnc","split":"test","query":"encrypt data with AES cryptographic cipher","expected":"core/crypto/aes.js"},
+    {"id":"novnc-10","project":"novnc","split":"test","query":"translate browser mouse key codes into keysym","expected":"core/input/keysym.js"},
+
+    {"id":"nvm-01","project":"nvm","split":"dev","query":"shell profile detection installer configuration","expected":"install.sh"},
+    {"id":"nvm-02","project":"nvm","split":"dev","query":"nvm version command alias switching","expected":"nvm.sh"},
+    {"id":"nvm-03","project":"nvm","split":"dev","query":"shell completion for nvm commands and aliases","expected":"bash_completion"},
+    {"id":"nvm-04","project":"nvm","split":"dev","query":"execute a command with configured node version","expected":"nvm-exec"},
+    {"id":"nvm-05","project":"nvm","split":"dev","query":"install nvm directory choose profile","expected":"install.sh"},
+    {"id":"nvm-06","project":"nvm","split":"dev","query":"NVM_DIR environment variables version resolve","expected":"nvm.sh"},
+    {"id":"nvm-07","project":"nvm","split":"test","query":"install script downloading nvm repository","expected":"install.sh"},
+    {"id":"nvm-08","project":"nvm","split":"test","query":"bash completion command suggestions for flags","expected":"bash_completion"},
+    {"id":"nvm-09","project":"nvm","split":"test","query":"running nvm executable in subshell","expected":"nvm-exec"},
+    {"id":"nvm-10","project":"nvm","split":"test","query":"implement LTS aliases and select node version","expected":"nvm.sh"},
+
+    {"id":"npm-01","project":"npm","split":"dev","query":"install a package dependency into local project","expected":"lib/commands/install.js"},
+    {"id":"npm-02","project":"npm","split":"dev","query":"check vulnerability audit dependency report","expected":"lib/commands/audit.js"},
+    {"id":"npm-03","project":"npm","split":"dev","query":"configuration command set get registry value","expected":"lib/commands/config.js"},
+    {"id":"npm-04","project":"npm","split":"dev","query":"exit handling error after npm CLI fails","expected":"lib/cli/exit-handler.js"},
+    {"id":"npm-05","project":"npm","split":"dev","query":"map workspaces list all package locations","expected":"lib/utils/get-workspaces.js"},
+    {"id":"npm-06","project":"npm","split":"dev","query":"npm CLI shell tab command completion","expected":"lib/commands/completion.js"},
+    {"id":"npm-07","project":"npm","split":"test","query":"remove stale entries npm cache clean","expected":"lib/commands/cache.js"},
+    {"id":"npm-08","project":"npm","split":"test","query":"authenticate registry with npm login","expected":"lib/commands/login.js"},
+    {"id":"npm-09","project":"npm","split":"test","query":"publish package tarball to registry","expected":"lib/commands/publish.js"},
+    {"id":"npm-10","project":"npm","split":"test","query":"npm CLI initial boot sequence entry point","expected":"lib/cli/entry.js"}
+  ]
+}

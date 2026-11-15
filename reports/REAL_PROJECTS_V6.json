@@ -1,0 +1,47 @@
+{
+  "method": "real-source offline initialization, no Agent model calls and no installed dependency-cruiser",
+  "results": [
+    {
+      "name": "novnc",
+      "preExistingEntries": 19,
+      "created": 17,
+      "preserved": 1,
+      "reinitCreated": 0,
+      "docs": true,
+      "doctor": true,
+      "visualCheck": true,
+      "visualMode": "inventory",
+      "pending": 3,
+      "sourceModules": 13,
+      "verifiedEdges": 0
+    },
+    {
+      "name": "nvm",
+      "preExistingEntries": 26,
+      "created": 17,
+      "preserved": 1,
+      "reinitCreated": 0,
+      "docs": true,
+      "doctor": true,
+      "visualCheck": true,
+      "visualMode": "inventory",
+      "pending": 3,
+      "sourceModules": 10,
+      "verifiedEdges": 0
+    },
+    {
+      "name": "npm",
+      "preExistingEntries": 6,
+      "created": 17,
+      "preserved": 1,
+      "reinitCreated": 0,
+      "docs": true,
+      "doctor": true,
+      "visualCheck": true,
+      "visualMode": "inventory",
+      "pending": 3,
+      "sourceModules": 6,
+      "verifiedEdges": 0
+    }
+  ]
+}
