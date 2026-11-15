@@ -115,3 +115,9 @@ test('bundled verify resolves its own project even if invoked from another cwd',
  const run=spawnSync(process.execPath,[nested,'verify','--json'],{cwd:other,encoding:'utf8'});
  assert.equal(run.status,0,run.stderr);assert.equal(JSON.parse(run.stdout).status,'PASS');
 });
+
+test('npm-style symlink invokes CLI rather than silently exiting',t=>{
+ const root=tmp(t),link=path.join(root,'agentrepo');fs.symlinkSync(cli,link);
+ const result=spawnSync(link,['version'],{encoding:'utf8'});
+ assert.equal(result.status,0,result.stderr);assert.match(result.stdout,/1\.0\.0-rc\.1/);
+});
