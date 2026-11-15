@@ -33,3 +33,44 @@ test('minimal: public CLI flag works; source map drift still fails',t=>{
  fs.writeFileSync(path.join(root,'src/b.js'),'export const b=2;\n');
  assert.ok(doDocs(root).issues.some(x=>x.type==='stale-map'));
 });
+
+
+import {execFileSync,spawnSync} from 'node:child_process';
+
+test('minimal bundle: can bootstrap another minimal repo without architecture HTML',t=>{
+ const root=tmp(t), first=path.join(root,'first'), second=path.join(root,'second');
+ doInit(first,{minimal:true});
+ const cli=path.join(first,'.agentrepo/cli.mjs');
+ assert.equal(fs.existsSync(path.join(first,'.agentrepo/architecture-template.html')),false);
+ const r=JSON.parse(execFileSync(process.execPath,[cli,'init',second,'--minimal','--json'],{encoding:'utf8'}));
+ assert.equal(r.ok,true);assert.equal(r.created.length,7);
+ assert.equal(fs.existsSync(path.join(second,'.agentrepo/cli.mjs')),true);
+ const doctor=JSON.parse(execFileSync(process.execPath,[path.join(second,'.agentrepo/cli.mjs'),'doctor','--json'],{cwd:second,encoding:'utf8'}));
+ assert.equal(doctor.ok,true);
+});
+
+test('minimal bundle: adopt apply uses the available profile and preserves original AGENTS',t=>{
+ const root=tmp(t), first=path.join(root,'minimal'), existing=path.join(root,'existing');
+ doInit(first,{minimal:true});fs.mkdirSync(existing,{recursive:true});
+ const policy='# Team rules\nDo not modify release jobs.\n';
+ fs.writeFileSync(path.join(existing,'AGENTS.md'),policy);
+ const cli=path.join(first,'.agentrepo/cli.mjs');
+ execFileSync(process.execPath,[cli,'adopt','plan',existing,'--write','--json'],{encoding:'utf8'});
+ const result=JSON.parse(execFileSync(process.execPath,[cli,'adopt','apply',existing,'--approve','--json'],{encoding:'utf8'}));
+ assert.equal(result.status,'PENDING_ACTIVATION');
+ assert.equal(JSON.parse(fs.readFileSync(path.join(existing,'agentrepo.json'),'utf8')).profile,'minimal');
+ assert.equal(fs.readFileSync(path.join(existing,'AGENTS.md'),'utf8'),policy);
+ assert.equal(fs.existsSync(path.join(existing,'.agentrepo/adoption-guide.md')),true);
+ assert.equal(fs.existsSync(path.join(existing,'docs/architecture.html')),false);
+});
+
+test('minimal bundle: full-only features fail with a useful error, never ENOENT',t=>{
+ const root=tmp(t), first=path.join(root,'minimal');doInit(first,{minimal:true});
+ const cli=path.join(first,'.agentrepo/cli.mjs');
+ for(const argv of [['init',path.join(root,'full')],['arch','view','--write']]){
+   const out=spawnSync(process.execPath,[cli,...argv],{encoding:'utf8',cwd:first});
+   assert.notEqual(out.status,0);
+   assert.doesNotMatch(out.stderr,/ENOENT|no such file or directory/i);
+   assert.match(out.stderr,/minimal|full initialization|full agentrepo/i);
+ }
+});
