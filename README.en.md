@@ -1,65 +1,50 @@
 # AgentRepo Kit
 
-A Node.js CLI that adds agent instructions, architecture visualization, verification commands, and replayable evals to repositories. New projects receive a complete template; existing projects retain their own rules.
+Make a repository **legible, executable, and verifiable** for coding agents. Node.js 20+. Zero third-party runtime dependencies.
 
-Requires Node.js 20+. Current version: v0.9.0. MIT license. No third-party runtime dependencies. Not published to the npm Registry.
-
-[中文说明](README.md) · [Usage](docs/USAGE.zh-CN.md) · [Adoption](docs/ADOPTION.zh-CN.md) · [Architecture](docs/ARCHITECTURE.zh-CN.md) · [Evals](docs/EVAL.zh-CN.md)
-
-## Minimal mode
-
-Run `agentrepo init ../my-project --minimal` to install seven core files for source discovery and verification. HTML, GitHub templates, and per-project Eval fixtures are omitted; full initialization is unchanged.
-
-## Initialize
-
-From a source checkout:
+## Quick start
 
 ```sh
-npm install --offline --ignore-scripts
-npm link
-agentrepo init ../my-project --dry-run
-agentrepo init ../my-project
-cd ../my-project
-node .agentrepo/cli.mjs doctor
+node bin/agentrepo.mjs inspect /path/to/project
+node bin/agentrepo.mjs verify /path/to/project
+node bin/agentrepo.mjs init /path/to/project --dry-run
+node bin/agentrepo.mjs init /path/to/project
+```
+
+`inspect` reads existing rules and detects the native toolchain. `verify` can run detected native tests even before initialization. `init` installs only missing files, never overwrites project-owned instructions or CI, and never runs setup scripts.
+
+After initialization:
+
+```sh
+cd /path/to/project
+node .agentrepo/cli.mjs setup
+node .agentrepo/cli.mjs dev
+node .agentrepo/cli.mjs test
 node .agentrepo/cli.mjs verify
 ```
 
-Generated files include `AGENTS.md`, `docs/architecture.md`, `docs/architecture.html`, `docs/code-map.md`, `docs/development.md`, `eval/`, and `.agentrepo/cli.mjs`. Unknown project facts use `{{REQUIRES_REVIEW:...}}` placeholders.
+Commands live in `agentrepo.json.commands` as arrays of argv arrays. Unknown commands stay `null`; missing verification is a failure, not a pass.
 
-## Adopt an existing repository
-
-```sh
-agentrepo adopt scan
-agentrepo adopt plan --write
-agentrepo adopt apply --approve
-agentrepo adopt activate --approve --reason "Reviewed existing rules"
-agentrepo adopt verify
-```
-
-`init` adds missing files. `adopt` checks existing rules, installs the integration entry point after approval, and detects later changes. See the [adoption guide](docs/ADOPTION.zh-CN.md).
-
-## Architecture checks
-
-JavaScript and TypeScript projects can install [dependency-cruiser](https://github.com/sverweij/dependency-cruiser):
+## Existing repositories
 
 ```sh
-npm install --save-dev dependency-cruiser
-node .agentrepo/cli.mjs arch init
-node .agentrepo/cli.mjs arch check --strict
-node .agentrepo/cli.mjs arch view --write
+node bin/agentrepo.mjs adopt /path/to/existing-project
+node bin/agentrepo.mjs adopt /path/to/existing-project --apply
 ```
 
-Dependency edges in the generated HTML come from analyzer output. Missing checks are reported as `SKIP`.
+The first command is read-only. The second adds missing files. Existing README, AGENTS, docs, workflows, source and tests remain unchanged. Review the integration note if AGENTS already exists.
 
-## Tests and evals
+## Installed files
+
+A short `AGENTS.md`, one-page `docs/architecture.md`, `docs/development.md`, `agentrepo.json`, and a standalone `.agentrepo/cli.mjs`. README, `.env.example`, and `.gitignore` are created only as needed. No HTML diagrams, project-level evaluation framework, or new CI workflows are installed by default.
+
+## Development
 
 ```sh
 npm test
-npm run eval:smoke
 npm run check
-npm pack --dry-run
 ```
 
-Deterministic evals cover CLI behavior. Autonomous task success and Token savings require paired agent runs with measured usage.
+See [Architecture](docs/ARCHITECTURE.zh-CN.md), [Contributing](CONTRIBUTING.md), and [MIT License](LICENSE).
 
-[Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md) · [License](LICENSE)
+The previous governance and evaluation implementation is preserved in the `archive/pre-lean-v1` branch.

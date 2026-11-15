@@ -1,42 +1,22 @@
 # AgentRepo Kit 架构
 
-## 职责划分
+目标是让新启动的 Coding Agent 能回答三个问题：代码在哪里、项目如何运行、修改后怎样验收。
 
-- `bin/agentrepo.mjs` 是当前统一 Node.js CLI，集中实现初始化、代码索引、文档漂移检查、架构命令和 Eval 命令。
-- `bin/architecture-template.html` 是离线、自包含架构图模板。CLI 根据当前仓库数据生成最终 HTML。
-- `tests/` 存放 Node.js 自动化检查，覆盖文件保护、路径安全、文档检查、依赖检查接线和 HTML 安全。
-- `benchmarks/` 存放固定题集和评估运行器。第三方源码快照不包含在项目发布包中。
-- `reports/` 存放各轮历史 Eval 记录及其局限。
+| 组件 | 事实来源 | 操作 |
+| --- | --- | --- |
+| 仓库入口 | 现有 README、AGENTS、CI | `agentrepo inspect` |
+| 统一命令 | Makefile、package.json、Go/Rust 配置 | `agentrepo setup/dev/test/verify` |
+| 代码地图 | 当前文件树 | `agentrepo map --check/--write` |
+| 原规则 | 已存在的文件 | `agentrepo adopt` 只读；`--apply` 补缺失项 |
 
-## 目标仓库流程
+`bin/agentrepo.mjs` 是唯一运行时入口。初始化时将该文件复制到目标仓库的 `.agentrepo/cli.mjs`，无需再次安装本工具。
 
-```text
-初始化
-  ↓
-识别项目配置与源码文件
-  ↓
-创建规则文档、占位符和统一 CLI
-  ↓
-生成代码索引及架构 HTML
-  ↓
-开发任务定位 → 修改 → 执行验证
-  ↓
-检查文档漂移和架构约束
-  ↓
-记录决策、交接、失败案例并执行 Eval
-```
+## 边界
 
-## 事实来源和信任边界
+- 只根据真实项目文件推导命令和目录。无法检测的命令使用 `null`。
+- 安装只写不存在的文件。已有 AGENTS、README、架构文档和 CI 原样保留。
+- 初始化不运行项目脚本。`setup`、`dev`、`test`、`verify` 由用户显式执行。
+- 使用 `spawnSync` 传递 argv 数组，不将项目命令拼接成 Shell 字符串。
+- `verify` 的通过仅代表已执行的项目检查返回退出码 0，不代表业务功能都正确。
 
-1. 代码索引的事实来源是目标仓库的文件树，不手工维护第二份清单。
-2. 架构依赖线的事实来源是实际依赖分析输出。没有分析结果时不得推测连线。
-3. 项目目标和设计理由属于需要确认的业务事实，用 `{{REQUIRES_REVIEW:FIELD}}` 标记。
-4. 文档复审记录只能证明发生过复审，不能证明自然语言语义完全正确。
-5. `verify` 需要把缺失的必需检查标记为失败，不得转成成功。
-6. Eval 的模型 Token 节省只能根据相同任务下的真实配对用量计算。
-
-## 当前架构的改进方向
-
-当前 CLI 主要集中在单个文件中，有利于离线分发，但长期扩展需要评估模块化和构建流程。本版本不声称已经有完整插件系统、语义检索引擎或跨语言依赖分析器。
-
-[架构 HTML 示例](../examples/architecture-demo.html)
+代码边界、数据库、端口、密钥与其他项目专属事实由项目维护者补齐。依赖方向可以通过原项目的 Lint 或 dependency-cruiser 写入自己的验证命令。
