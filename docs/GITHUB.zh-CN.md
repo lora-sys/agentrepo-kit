@@ -1,16 +1,8 @@
-# GitHub 协作模板与接手项目
+# GitHub 协作模板
 
-## 默认生成规则
+空仓库生成只读 CI、Issue Forms、PR 检查清单和含 `Unreleased` 的 Changelog。
 
-空仓库自动获得只读 GitHub Actions 工作流、Bug 和功能建议 Issue Forms、PR 检查清单，以及 Keep a Changelog 格式的 Unreleased 入口。
-
-## 已有项目优先
-
-接入已有仓库时，先检查以下文件的现有位置和内容。已有 Workflow 不替换，已有 Issue 模板目录不注入额外表单，已有 PR 模板无论位于根目录、docs 或 .github 都保留，已有 HISTORY、NEWS、CHANGES、CHANGELOG 不复制一份。
-
-接入已有项目默认不新增 Workflow，只有显式选择 init --github-workflow，且不存在其他工作流时才补上默认检查。CI 仅使用 contents: read 权限，不访问生产部署密钥。
-
-## 运行检查
+已有仓库保留原 Workflow、Issue 模板、PR 模板及更新日志。PR 模板识别根目录、`docs/` 与 `.github/`；更新日志识别 `HISTORY`、`NEWS`、`CHANGES` 和 `CHANGELOG`。接入时默认不增加 CI，只有仓库尚无工作流且显式传入 `init --github-workflow` 才创建。
 
 ```sh
 agentrepo github check
@@ -18,8 +10,6 @@ agentrepo init ./project --dry-run
 agentrepo init ./project
 ```
 
-## 局限
+本地检查不包括组织默认社区文件、GitHub 分支保护、仓库设置和外部 CI 服务。CI 使用 `contents: read` 权限。
 
-CLI 只检查本地文件。GitHub 组织的默认社区文件、仓库设置、分支保护规则和外部 CI 服务需要另外核实。缺少本地模板不是现有项目失败的证据。
-
-参考 GitHub 官方 Issue Forms、PR templates、GitHub Actions Security 与 Keep a Changelog。
+参考 GitHub Issue Forms、PR templates、Actions Security 和 Keep a Changelog。
