@@ -14,7 +14,8 @@
     "bench": "node benchmarks/run.mjs",
     "replay": "node bin/agentrepo.mjs eval replay --json",
     "check": "node --check bin/agentrepo.mjs && npm test",
-    "eval:smoke": "node benchmarks/smoke.mjs"
+    "eval:smoke": "node benchmarks/smoke.mjs",
+    "eval:agent:smoke": "node benchmarks/agent-eval/cli.mjs smoke"
   },
   "files": [
     "bin",

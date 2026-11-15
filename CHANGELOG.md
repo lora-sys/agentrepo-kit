@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- 增加真实 Coding Agent A/B/C 实验运行器，支持固定 Git SHA、隔离工作区、独立验收、Codex JSONL Token 记录和配对报告。
+- 增加三组模拟执行烟雾测试与防止模拟 Token 混入真实报告的永久回归测试。
+
 ## [0.9.0] · 2026-11-15
 
 ### Changed
