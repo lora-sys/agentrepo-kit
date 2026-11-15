@@ -6,6 +6,10 @@ Requires Node.js 20+. Current version: v0.9.0. MIT license. No third-party runti
 
 [中文说明](README.md) · [Usage](docs/USAGE.zh-CN.md) · [Adoption](docs/ADOPTION.zh-CN.md) · [Architecture](docs/ARCHITECTURE.zh-CN.md) · [Evals](docs/EVAL.zh-CN.md)
 
+## Minimal mode
+
+Run `agentrepo init ../my-project --minimal` to install seven core files for source discovery and verification. HTML, GitHub templates, and per-project Eval fixtures are omitted; full initialization is unchanged.
+
 ## Initialize
 
 From a source checkout:

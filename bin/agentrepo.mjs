@@ -26,7 +26,7 @@ function argsOf(tokens) {
     const x=tokens[i];
     if (!x.startsWith('--')) {pos.push(x);continue;}
     const eq=x.indexOf('=');const key=x.slice(2,eq<0?undefined:eq);
-    if (['dry-run','json','check','write','help','strict','arch','github-workflow'].includes(key)) opts[key]=true;
+    if (['dry-run','json','check','write','help','strict','arch','github-workflow','minimal'].includes(key)) opts[key]=true;
     else if(eq>=0) opts[key]=x.slice(eq+1);
     else if(tokens[i+1]!==undefined && !tokens[i+1].startsWith('--')) opts[key]=tokens[++i];
     else opts[key]=true;
@@ -352,6 +352,7 @@ Track user-visible changes in [Keep a Changelog](https://keepachangelog.com/en/1
 function template(root,opts={}) {
   const d=detect(root);const docsRulePaths=[...new Set([...d.sourceRoots.filter(p=>p!=='.'&&!['test','tests','scripts','utils'].includes(p)).map(p=>`${p}/**`),'*.sh','*.bash','*.zsh','*.js','*.ts','*.py','*.go','nvm-exec','bash_completion','Makefile','Dockerfile'])];
   const cfg={version:2,project:path.basename(path.resolve(root)),stack:d.stack,sourceRoots:d.sourceRoots,commands:d.commands,architecture:{forbiddenImports:[]},docRules:[{id:'architecture',doc:'docs/architecture.md',watch:docsRulePaths}],requiredChecks:[]};
+  if(opts.minimal){cfg.profile='minimal';cfg.docRules=[];}
   const files={
     'README.md':`# ${path.basename(path.resolve(root))}
 
@@ -494,6 +495,19 @@ Read argv arrays from \`agentrepo.json\`; do not infer missing commands. Unconfi
     '.agentrepo/.gitignore':'cache/\nreports/\n',
 
   };
+  if(opts.minimal){
+    const minimalAgents="# Agent entry\n\n1. Read original project instructions and task-relevant files first.\n2. Use `node .agentrepo/cli.mjs locate \"keywords\"` to find code; confirm callers and tests before edits.\n3. Keep changes within task scope. Preserve public contracts and existing CI.\n4. Run `node .agentrepo/cli.mjs verify --require test` and `node .agentrepo/cli.mjs docs check --strict`. Report PASS, FAIL, and SKIP separately.\n5. Never expose secrets, fabricate results, or overwrite project-owned configuration.\n\nCommands are configured in `agentrepo.json.commands`. See `docs/development.md`.\n";
+    const minimalDev="# Development\n\n- Commands: `agentrepo.json.commands`\n- Find code: `node .agentrepo/cli.mjs locate \"keywords\"`\n- Check environment: `node .agentrepo/cli.mjs doctor`\n- Verify: `node .agentrepo/cli.mjs verify --require test`\n- Check docs and map: `node .agentrepo/cli.mjs docs check --strict`\n\nMissing project commands return SKIP. Required test checks return FAIL. Do not invent setup or test commands.\n";
+    return {
+      'agentrepo.json':json(cfg),
+      'AGENTS.md':minimalAgents,
+      'docs/code-map.md':files['docs/code-map.md'],
+      'docs/development.md':minimalDev,
+      '.agentrepo/cli.mjs':files['.agentrepo/cli.mjs'],
+      '.agentrepo/adoption.mjs':files['.agentrepo/adoption.mjs'],
+      '.agentrepo/.gitignore':files['.agentrepo/.gitignore']
+    };
+  }
   return {...files,...githubTemplateFiles(root,opts)};
 }
 function doInit(root, opts={}) {
@@ -509,7 +523,7 @@ function doInit(root, opts={}) {
 function config(root){const file=path.join(root,'agentrepo.json');if(!canRead(file))throw new Error(`No agentrepo.json in ${root}; run init`);const cfg=parseJson(file);if(![2].includes(cfg.version))throw new Error(`Unsupported config version: ${cfg.version}`);return cfg;}
 function doDoctor(root){const c=config(root);const checks=[];
   for(const [name,argv] of Object.entries(c.commands||{})){checks.push({id:`command.${name}`,status:Array.isArray(argv)&&argv.length>0&&argv.every(x=>typeof x==='string'&&x)?'PASS':'FAIL'});}
-  for(const d of ['AGENTS.md','docs/architecture.md','docs/development.md','docs/code-map.md','eval/regressions.json'])checks.push({id:d,status:canRead(path.join(root,d))?'PASS':'FAIL'});
+  for(const d of (c.profile==='minimal'?['AGENTS.md','docs/development.md','docs/code-map.md','.agentrepo/cli.mjs']:['AGENTS.md','docs/architecture.md','docs/development.md','docs/code-map.md','eval/regressions.json']))checks.push({id:d,status:canRead(path.join(root,d))?'PASS':'FAIL'});
   const allowedChecks=new Set(['setup','test','lint','typecheck','architecture','e2e']);
   for(const x of c.requiredChecks||[])if(!allowedChecks.has(x))checks.push({id:`required.${x}`,status:'FAIL',reason:'unknown verification check'});
   checks.push({id:'configured.tests',status:c.commands?.test?'PASS':'SKIP'});
@@ -568,7 +582,7 @@ function doDocs(root,opts={}) {const c=config(root),issues=[];const links=mdLink
   const ids=(c.docRules||[]).map(r=>r.id);if(new Set(ids).size!==ids.length)issues.push({type:'duplicate-rule'});
   if(opts.strict){
     const html=path.join(root,'docs/architecture.html');
-    if(!canRead(html)||(fileText(html).includes('name="agentrepo-source-hash"')&&!fileText(html).includes(`name="agentrepo-source-hash" content="${sourceFingerprint(root)}"`)))
+    if(c.profile!=='minimal' && (!canRead(html)||(fileText(html).includes('name="agentrepo-source-hash"')&&!fileText(html).includes(`name="agentrepo-source-hash" content="${sourceFingerprint(root)}"`))))
       issues.push({type:'stale-architecture-visual',file:'docs/architecture.html',hint:'Run agentrepo arch view --write'});
     for(const p of placeholderStatus(root))issues.push({type:'unresolved-placeholder',...p});
   }
@@ -837,7 +851,7 @@ function auditEval(){
     return {ok:fp===0&&fn===0,suite:'known-fault diagnostic fixtures (not coding-agent accuracy)',matrix:{tp,tn,fp,fn},accuracy:(tp+tn)/cases.length,precision:tp/(tp+fp||1),recall:tp/(tp+fn||1),cases};
   }finally{fs.rmSync(tmp,{recursive:true,force:true});}
 }
-function usage(){return `AgentRepo Kit ${VERSION}\nCommands:\n  agentrepo init [dir] [--dry-run] [--arch] [--github-workflow] [--json]\n  agentrepo doctor [--json]
+function usage(){return `AgentRepo Kit ${VERSION}\nCommands:\n  agentrepo init [dir] [--minimal] [--dry-run] [--arch] [--github-workflow] [--json]\n  agentrepo doctor [--json]
   agentrepo github check [--json]
   agentrepo adopt scan [dir] [--json]
   agentrepo adopt plan [dir] [--write] [--refresh --approve] [--json]
