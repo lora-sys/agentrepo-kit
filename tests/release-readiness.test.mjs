@@ -22,6 +22,12 @@ test('release: package metadata and CLI entry are consistent',()=>{
   assert.ok(fs.statSync(path.join(root,p.bin.agentrepo)).isFile());
 });
 
+test('release: CLI entry is executable on POSIX (regression for CI EACCES)', {skip: process.platform === 'win32'}, () => {
+  const entry=path.join(root,'bin/agentrepo.mjs');
+  const mode=fs.statSync(entry).mode;
+  assert.ok(mode & 0o111, `${entry} has no executable bit. Run chmod +x bin/agentrepo.mjs and commit the file mode.`);
+});
+
 test('release: relative markdown links in main READMEs resolve',()=>{
   for(const file of ['README.md','README.en.md']){
     const content=read(file);
