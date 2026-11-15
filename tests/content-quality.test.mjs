@@ -14,9 +14,9 @@ test('quality: generated instructions stay concise without dropping critical rul
   t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
   doInit(dir);
   for(const [file,max] of Object.entries({
-    'AGENTS.md':1150,
-    'docs/architecture.md':900,
-    'docs/development.md':700,
+    'AGENTS.md':1650,
+    'docs/architecture.md':1100,
+    'docs/development.md':1200,
     'docs/github.md':520,
     '.github/pull_request_template.md':520,
     'CHANGELOG.md':220
@@ -26,11 +26,11 @@ test('quality: generated instructions stay concise without dropping critical rul
     assert.ok(!/^\s*(\S.+)\n\1\s*$/gm.test(body),`${file} repeats a line`);
   }
   const agents=read(dir,'AGENTS.md');
-  for(const required of ['existing project rules','verify','PASS','FAIL','SKIP','docs check','arch check','plans/','secrets']){
+  for(const required of ['original project rules','verify','PASS','FAIL','SKIP','docs check','arch check','plans/','secrets']){
     assert.ok(agents.toLowerCase().includes(required.toLowerCase()),`missing AGENTS rule ${required}`);
   }
   const arch=read(dir,'docs/architecture.md');
-  for(const key of ['REQUIRES_REVIEW:MODULE_RESPONSIBILITIES_AND_CONTRACTS','REQUIRES_REVIEW:PROJECT_SPECIFIC_BOUNDARIES','dependency-cruiser','forbiddenImports'])
+  for(const key of ['REQUIRES_REVIEW:MODULE_PATH','REQUIRES_REVIEW:PROJECT_SPECIFIC_BOUNDARIES','dependency-cruiser','forbiddenImports'])
     assert.ok(arch.includes(key),`missing architecture evidence ${key}`);
   const dev=read(dir,'docs/development.md');
   assert.match(dev,/REQUIRES_REVIEW:ENVIRONMENT_AND_FIXTURES/);
@@ -48,7 +48,6 @@ test('quality: repository rules have no duplicate numbering or stale test totals
   assert.doesNotMatch(instructions,/last recorded validation.*ROUND6/);
 });
 
-
 test('quality: public guides stay task-focused and avoid defensive repetition',()=>{
   const budgets={
     'README.md':2200,
@@ -60,7 +59,7 @@ test('quality: public guides stay task-focused and avoid defensive repetition',(
   };
   for(const [file,max] of Object.entries(budgets)){
     const body=read(root,file);
-    assert.ok(body.length<=max,file+': '+body.length+' characters exceed review budget '+max);
+    assert.ok(body.length<=max,`${file}: ${body.length} characters exceed review budget ${max}`);
   }
   const joined=Object.keys(budgets).map(f=>read(root,f)).join('\n');
   for(const verbose of [
@@ -70,11 +69,30 @@ test('quality: public guides stay task-focused and avoid defensive repetition',(
     '不是模型睡眠',
     '注意这里的 `eval/incidents.json` 指',
     '不能通过生成文件数判断接入是否完成'
-  ]) assert.ok(!joined.includes(verbose),'defensive prose reintroduced: '+verbose);
+  ]) assert.ok(!joined.includes(verbose),`defensive prose reintroduced: ${verbose}`);
   for(const key of ['adopt scan','adopt plan','adopt apply','adopt activate','adopt verify','adopt reconcile'])
-    assert.ok(read(root,'docs/ADOPTION.zh-CN.md').includes(key),'adoption operation missing: '+key);
+    assert.ok(read(root,'docs/ADOPTION.zh-CN.md').includes(key),`adoption operation missing: ${key}`);
   for(const key of ['REQUIRES_REVIEW:FIELD','arch check --strict','docs review','eval report','SKIP'])
-    assert.ok(read(root,'docs/USAGE.zh-CN.md').includes(key),'usage contract missing: '+key);
+    assert.ok(read(root,'docs/USAGE.zh-CN.md').includes(key),`usage contract missing: ${key}`);
   for(const key of ['确定性','Agent','Token','SKIP'])
-    assert.ok(read(root,'docs/EVAL.zh-CN.md').includes(key),'eval definition missing: '+key);
+    assert.ok(read(root,'docs/EVAL.zh-CN.md').includes(key),`eval definition missing: ${key}`);
+});
+
+
+test('quality: generated agent guidance uses ordered commands and explicit verification', t=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agentrepo-contract-'));
+  t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+  doInit(dir);
+  const agents=read(dir,'AGENTS.md');
+  const steps=[...agents.matchAll(/^(\d+)\. /gm)].map(x=>Number(x[1]));
+  assert.deepEqual(steps,[1,2,3,4,5,6,7,8]);
+  for(const required of ['locate "keywords"','doctor','docs check --strict','PASS, FAIL and SKIP']){
+    // Only executable constraints or actionable fallback search belong in this file.
+    if(required==='If present') continue;
+    assert.ok(agents.includes(required),required);
+  }
+  assert.match(read(dir,'docs/architecture.md'),/\| Module path \| Responsibility \| Public API \/ exports \| Allowed callers \|/);
+  assert.match(read(dir,'docs/architecture.md'),/architecture\.forbiddenImports/);
+  assert.match(read(dir,'docs/development.md'),/\| Trigger \| Config key \/ command \| PASS condition \|/);
+  assert.match(read(dir,'docs/development.md'),/\| Setup \| `commands\.setup` \|/);
 });

@@ -13,7 +13,7 @@ test('complete ready-made docs with review placeholders and self-contained inter
  const r=root(t);doInit(r);const html=get(r,'docs/architecture.html');
  assert.match(html,/Architecture explorer/);assert.match(html,/type="application\/json"/);
  assert.ok(html.includes('const data=JSON.parse'));
- assert.equal(placeholderStatus(r).length,5);
+ assert.equal(placeholderStatus(r).length,8);
  assert.equal(doDocs(r).ok,true);
  assert.ok(doDocs(r,{strict:true}).issues.some(x=>x.type==='unresolved-placeholder'));
  assert.equal(runCLI(['arch','view','--check'],r).status,'PASS');

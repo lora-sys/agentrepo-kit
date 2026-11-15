@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// AgentRepo Kit v0.8.1. Node.js CLI with bundled, dependency-free adoption module.
+// AgentRepo Kit v0.9.0. Node.js CLI with bundled, dependency-free adoption module.
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { adoptScan, adoptPlan, adoptApply, adoptActivate, adoptVerify, adoptReconcile } from './adoption.mjs';
 
-const VERSION = '0.8.1';
+const VERSION = '0.9.0';
 const IGNORE = new Set(['.git', '.agentrepo', 'node_modules', '.venv', 'venv', 'dist', 'build', 'coverage', '.next', '.cache', '.turbo', '__pycache__', 'vendor', '.npm', '.pnpm-store', 'target', '.pytest_cache']);
 const SOURCE_ROOTS = ['src', 'app', 'apps', 'lib', 'core', 'packages', 'services', 'tests', 'test', 'internal', 'cmd', 'bin', 'scripts', 'utils'];
 const SOURCE_EXT = new Set(['.js','.jsx','.mjs','.cjs','.ts','.tsx','.mts','.cts','.py','.go','.rs','.java','.kt','.rb','.sh','.bash','.zsh','.php','.cs','.swift','.c','.h','.cc','.cpp','.vue','.svelte','.html','.css','.scss','.json','.yaml','.yml']);
@@ -72,14 +72,33 @@ function detect(root) {
   const pkg=canRead(path.join(root,'package.json'))?parseJson(path.join(root,'package.json')):null;
   let stack='generic'; if(pkg)stack='node'; else if(canRead(path.join(root,'pyproject.toml')))stack='python';else if(canRead(path.join(root,'go.mod')))stack='go';else if(canRead(path.join(root,'Cargo.toml')))stack='rust';else if(canRead(path.join(root,'Makefile')))stack='make';
   const commands={};
-  if(pkg)for(const [key,task] of Object.entries({setup:'install',dev:'dev',test:'test',lint:'lint',typecheck:'typecheck',e2e:'test:e2e',architecture:'check:architecture'})) {
-    if(key==='setup') {if(canRead(path.join(root,'package-lock.json')))commands.setup=['npm','ci'];continue;}
-    if(typeof pkg.scripts?.[task]==='string')commands[key]=['npm','run',task];
+  if(pkg){
+    const specified=typeof pkg.packageManager==='string'?pkg.packageManager.match(/^(npm|pnpm|yarn|bun)@/):null;
+    const locks=[['npm','package-lock.json'],['pnpm','pnpm-lock.yaml'],['yarn','yarn.lock'],['bun','bun.lock'],['bun','bun.lockb']]
+      .filter(([,file])=>canRead(path.join(root,file))).map(([manager])=>manager);
+    const unique=[...new Set(locks)];
+    const manager=specified?.[1] || (unique.length===1?unique[0]:null);
+    // When the manager is unknown, leave commands unconfigured rather than guessing npm.
+    if(manager){
+      const scripts={dev:'dev',test:'test',lint:'lint',typecheck:'typecheck',e2e:'test:e2e',architecture:'check:architecture'};
+      for(const [key,script] of Object.entries(scripts))if(typeof pkg.scripts?.[script]==='string') commands[key]=[manager,'run',script];
+      const lockNames={npm:'package-lock.json',pnpm:'pnpm-lock.yaml',yarn:'yarn.lock',bun:canRead(path.join(root,'bun.lock'))?'bun.lock':'bun.lockb'};
+      if(canRead(path.join(root,lockNames[manager]))) {
+        if(manager==='npm')commands.setup=['npm','ci'];
+        if(manager==='pnpm')commands.setup=['pnpm','install','--frozen-lockfile'];
+        if(manager==='yarn') {
+          const major=specified?.[1]==='yarn'?Number(pkg.packageManager.split('@')[1].split('.')[0]):0;
+          commands.setup=['yarn','install',major>1?'--immutable':'--frozen-lockfile'];
+        }
+        if(manager==='bun')commands.setup=['bun','install','--frozen-lockfile'];
+      }
+    }
   }
   const src=SOURCE_ROOTS.filter(x=>{try{return fs.statSync(path.join(root,x)).isDirectory();}catch{return false;}});
   if(!src.length)src.push('.');
   return {stack,sourceRoots:src,commands};
 }
+
 function mapText(root) {
   const files=sourceFiles(root);const dirs=new Map();
   for(const f of files){const pieces=f.split('/');const section=pieces.length>1?pieces.slice(0,Math.min(pieces.length-1,2)).join('/'):'(root)';dirs.set(section,(dirs.get(section)||0)+1);}
@@ -173,12 +192,16 @@ function archView(root,opts={}){
     edgeCount:rendered.data.edges.length,warning:custom?'Custom architecture HTML preserved; content freshness cannot be automatically verified':rendered.data.mode==='inventory'?'No dependency-cruiser results: diagram contains no dependency edges':undefined};
 }
 function placeholderStatus(root){
-  const docs=['README.md','docs/architecture.md','docs/development.md'];
+  // Inspect active project instructions, not blank reusable decision/plan templates.
+  const docs=['README.md','AGENTS.md','docs/architecture.md','docs/development.md',
+    ...walkFiles(root).filter(f=>f.startsWith('docs/domains/')&&f.endsWith('.md'))];
   const pending=[];
-  for(const f of docs){
+  for(const f of new Set(docs)){
     if(!canRead(path.join(root,f)))continue;
-    for(const m of fileText(path.join(root,f)).matchAll(/\{\{REQUIRES_REVIEW:([A-Z][A-Z0-9_]*)\}\}/g))
-      pending.push({file:f,field:m[1]});
+    for(const m of fileText(path.join(root,f)).matchAll(/\{\{REQUIRES_REVIEW(?::([^}\n]*)|[^}\n]*)\}\}/g)){
+      const field=m[1]??'INVALID_FORMAT';
+      pending.push({file:f,field,invalid:!/^[A-Z][A-Z0-9_]*$/.test(field)});
+    }
   }
   return pending;
 }
@@ -330,46 +353,71 @@ function template(root,opts={}) {
   const d=detect(root);const docsRulePaths=[...new Set([...d.sourceRoots.filter(p=>p!=='.'&&!['test','tests','scripts','utils'].includes(p)).map(p=>`${p}/**`),'*.sh','*.bash','*.zsh','*.js','*.ts','*.py','*.go','nvm-exec','bash_completion','Makefile','Dockerfile'])];
   const cfg={version:2,project:path.basename(path.resolve(root)),stack:d.stack,sourceRoots:d.sourceRoots,commands:d.commands,architecture:{forbiddenImports:[]},docRules:[{id:'architecture',doc:'docs/architecture.md',watch:docsRulePaths}],requiredChecks:[]};
   const files={
-    'README.md':`# ${path.basename(path.resolve(root))}\n\n## 项目目标\n\n{{REQUIRES_REVIEW:PROJECT_PURPOSE}}\n\n## 使用者\n\n{{REQUIRES_REVIEW:PRIMARY_USERS}}\n\n## 快速开始\n\n请先阅读 [开发与验证](docs/development.md)，安装、启动和测试命令以 agentrepo.json 中经过确认的配置为准。\n\n## 架构\n\n[架构说明](docs/architecture.md) · [可交互架构图](docs/architecture.html)\n\n## Agent 工作方式\n\n阅读 AGENTS.md，然后执行 \`node .agentrepo/cli.mjs doctor\`。\n`,
-    'agentrepo.json':json(cfg),
-    'AGENTS.md':`# Agent instructions
+    'README.md':`# ${path.basename(path.resolve(root))}
 
-## Read first
+## Project identity
 
-- Purpose: \`README.md\`. Module contracts: \`docs/architecture.md\`. Commands: \`docs/development.md\`.
-- Locate code with \`node .agentrepo/cli.mjs locate "keywords"\`; \`docs/code-map.md\` is only an index.
+| Field | Value |
+| --- | --- |
+| Purpose | {{REQUIRES_REVIEW:PROJECT_PURPOSE}} |
+| Users | {{REQUIRES_REVIEW:PRIMARY_USERS}} |
 
-## Work rules
+## Agent entry
 
-1. Follow existing project rules first. For adopted projects, read \`.agentrepo/adoption-guide.md\` if present.
-2. Inspect affected code and tests. Keep changes in scope; preserve public behavior unless approved.
-3. Run relevant tests and \`node .agentrepo/cli.mjs verify\`. Report PASS, FAIL, SKIP and unrun checks separately.
-4. After source or contract changes, run \`node .agentrepo/cli.mjs docs check\`. Refresh \`docs/architecture.html\` with \`arch view --write\` when dependencies change.
-5. For JS/TS architecture changes, run \`arch check --strict\` if configured. Never invent missing dependency edges.
-6. For multi-session tasks, record verified results and remaining work under \`docs/plans/\`.
-7. Isolate concurrent work and test data. Never commit secrets or modify production without approval.
+Read [AGENTS.md](AGENTS.md). Run \`node .agentrepo/cli.mjs doctor\` to inspect configuration and pending fields.
+
+## Documentation
+
+| Need | File |
+| --- | --- |
+| Modules and boundaries | [Architecture](docs/architecture.md) |
+| Dependency diagram | [Architecture HTML](docs/architecture.html) |
+| Commands and tests | [Development](docs/development.md) |
+| Code locations | [Code map](docs/code-map.md) |
 `,
-    'docs/architecture.md':`# Architecture
+    'agentrepo.json':json(cfg),
+    'AGENTS.md':`# Agent execution rules
 
-Purpose: [README](../README.md). Files: [code map](code-map.md). [Interactive graph](architecture.html) draws only verified dependency-cruiser edges; without analysis it shows files only.
+## Context routing
 
-## Module contracts
+| Need | Source |
+| --- | --- |
+| Goals and users | \`README.md\` |
+| Module contracts | \`docs/architecture.md\` |
+| Commands and fixtures | \`docs/development.md\` |
+| Source index | \`docs/code-map.md\` |
 
-{{REQUIRES_REVIEW:MODULE_RESPONSIBILITIES_AND_CONTRACTS}}
+## Execution
 
-For each module, record source path, responsibility, public API and callers. Mark unknowns.
+1. MUST follow original project rules first; read \`.agentrepo/adoption-guide.md\` if present. Load only task-relevant documents.
+2. MUST run \`node .agentrepo/cli.mjs doctor\`; unresolved project review fields block acceptance.
+3. MUST locate relevant code with \`node .agentrepo/cli.mjs locate "keywords"\`. Inspect callers and tests; search further if results are incomplete.
+4. MUST limit edits to task scope. Request approval before changing public APIs, dependencies, CI or production infrastructure if project rules require it.
+5. MUST run relevant tests, \`node .agentrepo/cli.mjs verify\` and \`node .agentrepo/cli.mjs docs check --strict\`.
+6. MUST report PASS, FAIL and SKIP; FAIL or unresolved context blocks completion. SKIP is not PASS.
+7. MUST run \`arch check --strict\` when JS/TS import boundaries are configured. Refresh managed HTML with \`arch view --write\` after dependency changes.
+8. MUST record long-task handoffs in \`docs/plans/\`. NEVER invent edges or results, expose secrets, or overwrite original project configuration.
+`,
+    'docs/architecture.md':`# Module contracts
 
-## Boundaries
+| Module path | Responsibility | Public API / exports | Allowed callers |
+| --- | --- | --- | --- |
+| {{REQUIRES_REVIEW:MODULE_PATH}} | {{REQUIRES_REVIEW:MODULE_RESPONSIBILITY}} | {{REQUIRES_REVIEW:MODULE_PUBLIC_API}} | {{REQUIRES_REVIEW:MODULE_ALLOWED_CALLERS}} |
+
+## Forbidden imports
 
 {{REQUIRES_REVIEW:PROJECT_SPECIFIC_BOUNDARIES}}
 
-Existing rules take precedence. Public API changes need approval. Store approved JS/TS import limits in \`agentrepo.json\` under \`architecture.forbiddenImports\`.
+Approved JS/TS boundaries: \`agentrepo.json.architecture.forbiddenImports\`.
 
-## Check
+| Action | Command |
+| --- | --- |
+| Update dependency-cruiser rules | \`node .agentrepo/cli.mjs arch sync\` |
+| Check import boundaries | \`node .agentrepo/cli.mjs arch check --strict\` |
+| Render verified dependency graph | \`node .agentrepo/cli.mjs arch view --write\` |
+| Validate docs | \`node .agentrepo/cli.mjs docs check --strict\` |
 
-With \`node .agentrepo/cli.mjs\`, run \`arch sync\` after rule changes, \`arch check --strict\` for import constraints and \`docs check --strict\` for documentation.
-
-Record design rationale in [decisions](decisions/README.md).
+[Project goals](../README.md) · [Source index](code-map.md) · [Architecture HTML](architecture.html)
 `,
     'docs/github.md':`# GitHub policy
 
@@ -380,26 +428,29 @@ Existing CI, Issue/PR templates and release rules take precedence. Find them wit
 - **PRs:** State scope, compatibility, executed tests and unrun checks; update docs and Changelog if affected.
 - **CI:** Never replace existing Workflows. Adding CI to adopted repos requires explicit \`init --github-workflow\`.
 `,
-    'docs/development.md':`# Development
+    'docs/development.md':`# Development contract
 
-Stack: ${d.stack}, detected but unverified. Confirm setup, dev and test commands in \`agentrepo.json\`.
+| Property | Source |
+| --- | --- |
+| Stack | \`agentrepo.json.stack\` |
+| Commands | \`agentrepo.json.commands\` |
+| Environment and fixtures | {{REQUIRES_REVIEW:ENVIRONMENT_AND_FIXTURES}} |
 
-## Environment and fixtures
+## Execution contract
 
-{{REQUIRES_REVIEW:ENVIRONMENT_AND_FIXTURES}}
+| Trigger | Config key / command | PASS condition |
+| --- | --- | --- |
+| Setup | \`commands.setup\` | Exit code 0 |
+| Start | \`commands.dev\` | Project health check passes |
+| Tests | \`commands.test\` | Exit code 0 |
+| Lint | \`commands.lint\` | Exit code 0 |
+| Preflight | \`node .agentrepo/cli.mjs doctor\` | Config readable |
+| After edits | \`node .agentrepo/cli.mjs verify\` | Exit code 0; required checks PASS |
+| After edits | \`node .agentrepo/cli.mjs docs check --strict\` | Exit code 0; no pending placeholders |
+| Import boundaries | \`node .agentrepo/cli.mjs arch check --strict\` | Exit code 0 when configured |
+| Regression replay | \`node .agentrepo/cli.mjs eval run\` | Exit code 0 |
 
-Use disposable test data. Never expose production secrets.
-
-## Checks
-
-Use \`node .agentrepo/cli.mjs\` with:
-
-- \`doctor\` for missing setup and review fields.
-- \`verify\` for configured tests; SKIP is not PASS.
-- \`docs check --strict\` for document freshness and placeholders.
-- \`eval run\` for known regressions.
-
-Record executed checks and remaining failures. Update tests and docs when public contracts change; hand off multi-session work in \`docs/plans/\`.
+Read argv arrays from \`agentrepo.json\`; do not infer missing commands. Unconfigured checks report SKIP, not PASS. Record long-task handoffs in \`docs/plans/\`.
 `,
     'docs/decisions/README.md':'# 架构决策\n\n只记录难以从代码还原的设计理由。使用 [决策记录模板](_TEMPLATE.md)，填写背景、备选方案、决定、影响范围和验收。小修改不需要建立决策文件。\n',
     'docs/decisions/_TEMPLATE.md':'# 决策编号与标题\n\n状态：待决策\n\n## 背景\n\n{{DECISION_CONTEXT}}\n\n## 可选方案\n\n{{ALTERNATIVES_AND_TRADEOFFS}}\n\n## 决定及理由\n\n{{DECISION_AND_RATIONALE}}\n\n## 影响的代码与验证\n\n{{AFFECTED_PATHS_AND_TESTS}}\n',
@@ -426,7 +477,9 @@ Record executed checks and remaining failures. Update tests and docs when public
       {id:'AR-012',cause:'Existing PR template in docs or root incorrectly triggered a duplicate GitHub template',guard:'tests/github-templates.test.mjs: alternate PR locations',status:'fixed'},
       {id:'AR-013',cause:'Adopting a repository added a competing GitHub Actions workflow by default',guard:'tests/github-templates.test.mjs: existing CI protection and opt-in',status:'fixed'},
       {id:'AR-014',cause:'Keeping existing AGENTS.md did not provide an explicit rule adoption process',guard:'tests/adoption.test.mjs: approved activation and original policy preservation',status:'fixed'},
-      {id:'AR-015',cause:'After adoption, changed original rules could silently invalidate the claimed configuration',guard:'tests/adoption.test.mjs: fingerprint detection and explicit reconcile',status:'fixed'}
+      {id:'AR-015',cause:'After adoption, changed original rules could silently invalidate the claimed configuration',guard:'tests/adoption.test.mjs: fingerprint detection and explicit reconcile',status:'fixed'},
+      {id:'AR-016',cause:'Verification could pass while required project context was unresolved',guard:'tests/template-contract.test.mjs: unresolved placeholders cause verify FAIL',status:'fixed'},
+      {id:'AR-017',cause:'Generated architecture and development docs had non-executable prose and an invalid module table placeholder row',guard:'tests/content-quality.test.mjs: typed contract tables and real command argv',status:'fixed'}
     ]}),
     'eval/scenarios.json':json({schemaVersion:1,cases:DEFAULT_SCENARIOS}),
     'eval/regressions.json':json({schemaVersion:1,cases:[
@@ -524,6 +577,10 @@ function doDocs(root,opts={}) {const c=config(root),issues=[];const links=mdLink
 }
 function testCommand(root,argv,timeout=120000){if(!Array.isArray(argv)||argv.length===0||!argv.every(x=>typeof x==='string'))throw new Error('Command must be nonempty argv array');const started=Date.now();const env={...process.env,CI:'1'};delete env.NODE_TEST_CONTEXT;const r=spawnSync(argv[0],argv.slice(1),{cwd:root,encoding:'utf8',shell:false,timeout,env,maxBuffer:2*1024*1024});return {exitCode:r.status??-1,seconds:Number(((Date.now()-started)/1000).toFixed(3)),output:((r.stdout||'')+(r.stderr||'')).slice(-2000),error:r.error?.message};}
 function doVerify(root,opts={}){const c=config(root),results=[];const required=new Set([...(c.requiredChecks||[]),...(opts.require?String(opts.require).split(','):[])]);
+  const pending=placeholderStatus(root);
+  results.push(pending.length
+    ? {name:'project-context',status:'FAIL',reason:'Unresolved project placeholders',pending}
+    : {name:'project-context',status:'PASS',reason:'All required project placeholders resolved'});
   for(const key of ['setup','test','lint','typecheck','architecture','e2e']){
     if(key==='setup'&&!opts['include-setup'])continue;
     const argv=c.commands?.[key];if(!argv){results.push({name:key,status:required.has(key)?'FAIL':'SKIP',reason:'not configured'});continue;}
@@ -766,7 +823,13 @@ function auditEval(){
     r=fresh('links');write(r,'docs/domains/auth.md','# Auth\n\n[valid](../architecture.md)\n');add('valid-local-link',false,!doDocs(r).ok);write(r,'docs/domains/auth.md','# Auth\n\n[broken](../missing.md)\n');add('broken-local-link',true,doDocs(r).issues.some(x=>x.type==='link'));
     r=fresh('site-routes',{'docs/content/getting-started.md':'[npm command](/commands/npm)\n'});add('site-route-not-a-file',false,!doDocs(r).ok);
     r=fresh('bad-uri');write(r,'docs/architecture.md','# Architecture\n\n[broken](oops%ZZ.md)\n');add('invalid-uri-encoding',true,doDocs(r).issues.some(x=>x.error==='invalid URI encoding'));
-    r=fresh('required');add('optional-test-absent',false,!doVerify(r).ok);add('missing-required-test',true,!doVerify(r,{require:'test'}).ok);
+    r=fresh('required');
+    add('unresolved-project-context',true,!doVerify(r).ok);
+    for(const f of ['README.md','docs/architecture.md','docs/development.md']){
+      write(r,f,fileText(path.join(r,f)).replace(/\{\{REQUIRES_REVIEW:[^}\n]+\}\}/g,'reviewed synthetic fixture'));
+    }
+    add('optional-test-absent',false,!doVerify(r).ok);
+    add('missing-required-test',true,!doVerify(r,{require:'test'}).ok);
     r=fresh('bad-config');const configFile=path.join(r,'agentrepo.json');const cfg=parseJson(configFile);cfg.requiredChecks=['nonexistent'];write(r,'agentrepo.json',json(cfg));add('unknown-required-check',true,!doDoctor(r).ok);
     r=fresh('arch',{ 'src/a.js':'import "./b.js";\n' });add('unconfigured-arch-is-skip',false,!archCheck(r).ok);archInit(r);add('strict-arch-missing-tool',true,!archCheck(r,{strict:true}).ok);
     r=fresh('shell',{ 'nvm-exec':'#!/bin/sh\necho before\n' });const git=(...x)=>gitExec(r,x);git('init','-q');git('config','user.email','audit@example.test');git('config','user.name','Audit');git('add','.');git('commit','-qm','init');const base=git('rev-parse','HEAD');add('clean-drift',false,!doDocs(r,{base}).ok);write(r,'nvm-exec','#!/bin/sh\necho after\n');add('changed-extensionless-entrypoint',true,doDocs(r,{base}).issues.some(x=>x.type==='drift'));
