@@ -4,7 +4,7 @@
 
 AgentRepo Kit 是一套可接入新项目和已有仓库的 Node.js 命令行脚手架。它提供已经写好的开发规则、清晰的待确认占位符、可视化架构 HTML、可执行的仓库检查，以及保留失败案例的 Eval。
 
-> 当前版本为 `v0.6.0`，需要 Node.js 20 或更高版本。CLI 本体不依赖第三方 npm 运行时包。
+> 当前版本为 `v0.7.0`，需要 Node.js 20 或更高版本。CLI 本体不依赖第三方 npm 运行时包。
 >
 > 项目仍处于实验阶段。脚手架的自动化测试不能等同于真实 Coding Agent 的开发成功率。
 
@@ -131,9 +131,20 @@ npm pack --dry-run
 
 ## 项目状态与许可
 
-- 当前代码：`v0.6.0`，已经完成 CLI 测试、基础架构 HTML 和内部回归检查。
+- 当前代码：`v0.7.0`，已经完成 CLI 测试、基础架构 HTML 和内部回归检查。
 - 尚未完成：多模型真实编程 A/B 评估、第三方分析器完整联网集成、浏览器截图视觉验收。
 - 已知局限：当前源码定位主要使用轻量词法方法，大型多语言单仓库还需要更广泛评估。
 - 开源协议：[MIT](LICENSE)。第三方评测项目源代码不随本仓库分发。
 
 [更新记录](CHANGELOG.md) · [GitHub 发布说明](docs/PUBLISHING.zh-CN.md) · [安全说明](SECURITY.md) · [行为准则](CODE_OF_CONDUCT.md)
+
+## GitHub 协作规范与已有仓库优先级
+
+空仓库会生成 Issue Forms、PR 模板、Changelog 和只读权限的静态 Workflow。已有项目优先保留自己的规则，并检查 GitHub 允许的其他模板路径和历史文件名。已有仓库默认不会启用新的 CI Workflow。
+
+```sh
+agentrepo github check
+agentrepo init ./existing-project --dry-run
+# 明确决定新增 CI 时才使用
+agentrepo init ./existing-project --github-workflow
+```

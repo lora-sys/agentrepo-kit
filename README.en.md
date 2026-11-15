@@ -6,7 +6,7 @@ AgentRepo Kit provides a Node.js CLI that prepares new or existing repositories 
 
 It ships with written rules and clear `{{REQUIRES_REVIEW:...}}` placeholders. Derived code facts are computed; unknown business facts are not invented.
 
-**Requirements:** Node.js 20+. Current version: `v0.6.0`. No third-party npm runtime dependencies are required by the core CLI.
+**Requirements:** Node.js 20+. Current version: `v0.7.0`. No third-party npm runtime dependencies are required by the core CLI.
 
 [中文说明](README.md) · [Full guide](docs/USAGE.zh-CN.md) · [Architecture](docs/ARCHITECTURE.zh-CN.md) · [Eval guide](docs/EVAL.zh-CN.md)
 
@@ -52,3 +52,7 @@ npm pack --dry-run
 See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and [CHANGELOG.md](CHANGELOG.md).
 
 Licensed under [MIT](LICENSE). Third-party benchmark repositories are not bundled.
+
+## GitHub collaboration policy
+
+Fresh repositories get complete GitHub templates. Existing repositories keep their own CI, Issue, PR and changelog conventions. Use `agentrepo github check`; workflows require explicit opt-in on adopted repositories.

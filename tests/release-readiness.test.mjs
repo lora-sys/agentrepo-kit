@@ -8,7 +8,7 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 
 test('release: required open-source repository files exist',()=>{
-  for(const file of ['README.md','README.en.md','LICENSE','AGENTS.md','CONTRIBUTING.md','SECURITY.md','CODE_OF_CONDUCT.md','CHANGELOG.md','.github/workflows/ci.yml','.github/pull_request_template.md','.github/ISSUE_TEMPLATE/bug_report.yml','docs/EVAL.zh-CN.md','docs/PUBLISHING.zh-CN.md','examples/architecture-demo.html']){
+  for(const file of ['README.md','README.en.md','LICENSE','AGENTS.md','CONTRIBUTING.md','SECURITY.md','CODE_OF_CONDUCT.md','CHANGELOG.md','.github/workflows/ci.yml','.github/ISSUE_TEMPLATE/config.yml','.github/pull_request_template.md','.github/ISSUE_TEMPLATE/bug_report.yml','docs/EVAL.zh-CN.md','docs/PUBLISHING.zh-CN.md','examples/architecture-demo.html']){
     assert.ok(fs.statSync(path.join(root,file)).isFile(),file);
   }
   assert.match(read('LICENSE'),/MIT License/);
