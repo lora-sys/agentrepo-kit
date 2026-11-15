@@ -6,6 +6,10 @@ Node.js 20+ · v0.9.0 · MIT。CLI 无第三方 npm 运行时依赖，尚未发�
 
 [English](README.en.md) · [完整用法](docs/USAGE.zh-CN.md) · [接入已有仓库](docs/ADOPTION.zh-CN.md) · [架构](docs/ARCHITECTURE.zh-CN.md) · [Eval](docs/EVAL.zh-CN.md) · [架构 HTML 示例](examples/architecture-demo.html)
 
+## 最小模式
+
+执行 `agentrepo init ../my-project --minimal`，只安装 AGENTS、代码索引、开发说明、配置和 CLI 共 7 个文件。不生成架构 HTML、GitHub 模板或项目级 Eval 文件。完整模式保持 `agentrepo init`，已有文件不覆盖。
+
 ## 初始化
 
 从源码安装 CLI：
