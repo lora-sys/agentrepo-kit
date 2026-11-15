@@ -47,3 +47,34 @@ test('quality: repository rules have no duplicate numbering or stale test totals
   assert.doesNotMatch(read(root,'README.md'),/当前源码的自动化基线为 42 项/);
   assert.doesNotMatch(instructions,/last recorded validation.*ROUND6/);
 });
+
+
+test('quality: public guides stay task-focused and avoid defensive repetition',()=>{
+  const budgets={
+    'README.md':2200,
+    'README.en.md':2500,
+    'docs/USAGE.zh-CN.md':4500,
+    'docs/ADOPTION.zh-CN.md':1400,
+    'docs/EVAL.zh-CN.md':1200,
+    'docs/GITHUB.zh-CN.md':700
+  };
+  for(const [file,max] of Object.entries(budgets)){
+    const body=read(root,file);
+    assert.ok(body.length<=max,file+': '+body.length+' characters exceed review budget '+max);
+  }
+  const joined=Object.keys(budgets).map(f=>read(root,f)).join('\n');
+  for(const verbose of [
+    '不要求用户从空白 Markdown 开始写',
+    '二者职责不同',
+    '不能自动取得原项目的架构决策权',
+    '不是模型睡眠',
+    '注意这里的 `eval/incidents.json` 指',
+    '不能通过生成文件数判断接入是否完成'
+  ]) assert.ok(!joined.includes(verbose),'defensive prose reintroduced: '+verbose);
+  for(const key of ['adopt scan','adopt plan','adopt apply','adopt activate','adopt verify','adopt reconcile'])
+    assert.ok(read(root,'docs/ADOPTION.zh-CN.md').includes(key),'adoption operation missing: '+key);
+  for(const key of ['REQUIRES_REVIEW:FIELD','arch check --strict','docs review','eval report','SKIP'])
+    assert.ok(read(root,'docs/USAGE.zh-CN.md').includes(key),'usage contract missing: '+key);
+  for(const key of ['确定性','Agent','Token','SKIP'])
+    assert.ok(read(root,'docs/EVAL.zh-CN.md').includes(key),'eval definition missing: '+key);
+});
