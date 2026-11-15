@@ -39,3 +39,10 @@ test('release: relative markdown links in main READMEs resolve',()=>{
     }
   }
 });
+
+test('release: CLI source version matches package metadata', () => {
+  const p=JSON.parse(read('package.json'));
+  const src=read('bin/agentrepo.mjs');
+  assert.ok(src.startsWith(`#!/usr/bin/env node\n// AgentRepo Kit v${p.version}.`));
+  assert.ok(src.includes(`const VERSION = '${p.version}'`));
+});
