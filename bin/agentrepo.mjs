@@ -267,6 +267,13 @@ export function main(argv = process.argv.slice(2), cwd = defaultWorkingDirectory
     output(result, asJson);
     return result?.ok === false ? 1 : 0;
 }
-if (process.argv[1] && path.resolve(process.argv[1]) === SELF)
+function invokedAsCLI() {
+    try {
+        return Boolean(process.argv[1]) && fs.realpathSync(process.argv[1]) === fs.realpathSync(SELF);
+    } catch {
+        return false;
+    }
+}
+if (invokedAsCLI())
     process.exitCode = main();
 export { detect, plan, init, inspect, doctor, map, locate, execute, walk, directoryMap };
