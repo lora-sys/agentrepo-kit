@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// AgentRepo Kit v0.5.0. Standalone Node.js CLI with no third-party dependencies.
+// AgentRepo Kit v0.7.0. Standalone Node.js CLI with no third-party dependencies.
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
