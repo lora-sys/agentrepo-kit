@@ -10,6 +10,16 @@
 
 这个 Skill 不要求项目使用 AgentRepo CLI，也不会默认要求生成代码地图、验证台账、新 CI 或新的命令系统。Agent 应使用项目本身已有的开发与测试命令。
 
+## 一键安装 AGENTS.md
+
+此变更合并后，在目标仓库根目录运行（需要 Node.js 20+ 和网络）：
+
+```sh
+npx --yes github:lora-sys/agentrepo-kit agents init
+```
+
+先预览可加 `--dry-run`。命令只创建 `AGENTS.md`，已有同名文件会原样保留。npm 包尚未发布，命令直接从 GitHub 获取；完整流程见 [`agentrepo-install` Skill](skills/agentrepo-install/SKILL.md)。
+
 ## 模板
 
 模板目录包含项目说明、架构与开发文档、环境变量示例、`.gitignore` 和可选 GitHub 协作模板。它们是素材，不是初始化时的必装清单。使用原则见 [`templates/README.md`](templates/README.md)。
@@ -19,13 +29,14 @@
 仓库仍保留 AgentRepo CLI，供需要自动检查、接入预览、命令运行、代码地图或 GitHub 模板预览的场景使用。它是可选工具，不是上述 Skill 的依赖。
 
 ```sh
+node bin/agentrepo.mjs agents init /path/to/project
 node bin/agentrepo.mjs inspect /path/to/project
 node bin/agentrepo.mjs adopt /path/to/project
 node bin/agentrepo.mjs adopt /path/to/project --apply
 node bin/agentrepo.mjs --help
 ```
 
-CLI `init` / `adopt --apply` 的历史默认脚手架行为仍可能生成多份辅助文件。若你的目标只是采用最简 Agent 工作流，请使用 Skill，并从模板目录单独选取需要的文件。
+`agents init` 只安装 AGENTS.md；CLI `init` / `adopt --apply` 的历史脚手架行为仍可能生成多份辅助文件。
 
 ## 本仓库开发
 

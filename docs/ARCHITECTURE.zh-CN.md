@@ -5,6 +5,7 @@
 | 部分 | 作用 | 默认行为 |
 | --- | --- | --- |
 | `skills/agentrepo-setup/SKILL.md` | 说明 Agent 如何理解、接手和开发一个仓库 | 是主入口，不要求 AgentRepo CLI |
+| `skills/agentrepo-install/SKILL.md` | 单独安装精简 `AGENTS.md` 的流程 | 只新增缺失文件，不覆盖已有内容 |
 | `templates/` | 提供 AGENTS、README、架构、开发环境及 GitHub 模板 | 仅按需选取；不是一次性安装清单 |
 | `skills/agentrepo-github/SKILL.md` | GitHub Issue、PR 和 Changelog 模板的可选流程 | 仅在用户需要时使用 |
 | `src/`、`bin/` | 可选 AgentRepo CLI 的源码与分发包 | 兼容现有 CLI 工作流，不是 Skill 的依赖 |
@@ -19,4 +20,4 @@
 
 ## 可选 CLI
 
-CLI 的实现位于 `src/agentrepo.mjs`，构建脚本会将项目模板嵌入 `bin/agentrepo.mjs`。CLI 保留 inspect、adopt、verify、map 和 GitHub 模板等自动化能力。其历史初始化流程仍可生成多份辅助文件；最简 Skill 工作流不依赖该流程。
+CLI 的实现位于 `src/agentrepo.mjs`，构建脚本会将项目模板嵌入 `bin/agentrepo.mjs`。`agents init` 只安装缺失的 `AGENTS.md`；其他 inspect、adopt、verify、map 和 GitHub 模板能力仍是可选项。历史 `init` 脚手架仍可生成多份辅助文件，最简工作流不需要使用它。

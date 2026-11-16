@@ -6,6 +6,8 @@ AgentRepo 的默认工作流是先理解仓库，再按需补充内容。模板�
 
 - [`project/AGENTS.md`](project/AGENTS.md)：新仓库缺少 Agent 入口时使用。填入从仓库事实中确认的内容；已有 `AGENTS.md` 默认保留。
 
+只需安装默认文件时，在目标仓库根目录运行 `npx --yes github:lora-sys/agentrepo-kit agents init`；加 `--dry-run` 可预览。该命令只新增缺少的 `AGENTS.md`。完整流程见 [`agentrepo-install` Skill](../skills/agentrepo-install/SKILL.md)。
+
 ## 按需模板
 
 - [`project/README.md`](project/README.md)：项目确实缺少面向人的说明，或用户要求建立 README 时使用。

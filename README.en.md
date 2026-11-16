@@ -10,6 +10,16 @@ Use [`templates/project/AGENTS.md`](templates/project/AGENTS.md) only when a use
 
 The Skill does not require the AgentRepo CLI. It does not require a generated code map, verification ledger, new CI, or a second command system. Agents should use the project's existing development and test commands.
 
+## One-command AGENTS.md install
+
+After this change is merged, run this from the target repository root (Node.js 20+ and network access required):
+
+```sh
+npx --yes github:lora-sys/agentrepo-kit agents init
+```
+
+Add `--dry-run` to preview. The command creates only `AGENTS.md` and preserves an existing file. The npm package is not published yet, so npx installs directly from GitHub. See the [`agentrepo-install` Skill](skills/agentrepo-install/SKILL.md) for the full workflow.
+
 ## Templates
 
 The template library includes optional project README, architecture and development docs, environment examples, `.gitignore`, and GitHub collaboration templates. They are resources, not a default installation bundle. See [`templates/README.md`](templates/README.md) for selection guidance.
@@ -19,13 +29,14 @@ The template library includes optional project README, architecture and developm
 The repository retains the AgentRepo CLI for users who need automated inspection, adoption previews, command execution, code maps, or GitHub template previews. The CLI is not required by the Skill.
 
 ```sh
+node bin/agentrepo.mjs agents init /path/to/project
 node bin/agentrepo.mjs inspect /path/to/project
 node bin/agentrepo.mjs adopt /path/to/project
 node bin/agentrepo.mjs adopt /path/to/project --apply
 node bin/agentrepo.mjs --help
 ```
 
-The historical `init` / `adopt --apply` scaffold may still create several helper files. For the minimal agent workflow, use the Skill and select individual templates instead.
+`agents init` installs only `AGENTS.md`. The historical `init` / `adopt --apply` scaffold may still create several helper files.
 
 ## Development
 

@@ -245,6 +245,24 @@ function renderTemplate(name, fields={}) {
 }
 function manual(root) { return renderTemplate('docs/architecture.md', {CODE_MAP:archBlock(root)}); }
 function agents(root) { return renderTemplate('AGENTS.md', {PROJECT_NAME:path.basename(root)}); }
+function installAgents(root, dry=false) {
+    if (exists(root) && !isRealDir(root)) throw Error('Target path is not a directory');
+    const target=path.join(root,'AGENTS.md');
+    try {
+        fs.lstatSync(target);
+        return {ok:true,status:'PRESERVED',path:target,reason:'AGENTS.md already exists'};
+    } catch (e) { if (e.code !== 'ENOENT') throw e; }
+    protect(root,'AGENTS.md');
+    if (dry) return {ok:true,status:'WOULD_CREATE',path:target};
+    fs.mkdirSync(root,{recursive:true});
+    try {
+        fs.writeFileSync(target,agents(root),{flag:'wx',mode:0o644});
+    } catch (e) {
+        if (e.code === 'EEXIST') return {ok:true,status:'PRESERVED',path:target,reason:'AGENTS.md appeared during installation'};
+        throw e;
+    }
+    return {ok:true,status:'CREATED',path:target};
+}
 function development(found) {
     const rows=['setup','dev','test','verify'].map(name=>{
         const commands=found.commands[name];
@@ -522,7 +540,7 @@ else if (typeof o === 'string')
     process.stdout.write(o + '\n');
 else
     process.stdout.write(JSON.stringify(o, null, 2) + '\n'); }
-const HELP = `AgentRepo Kit ${VERSION}\n\nUsage: agentrepo <inspect|init|adopt|github|doctor|map|locate|setup|dev|test|verify> [path]\n\n  inspect [path]      Read-only detection of project commands and existing rules\n  init [path]         Add only missing essentials; no install scripts run\n  init [path] --dry-run  Preview additions\n  adopt [path]        Same as read-only inspect for an existing project\n  adopt [path] --apply   Add missing files, preserving all existing files\n  github [path]       Preview optional GitHub Issue, PR and changelog templates\n  github [path] --apply  Add missing GitHub templates only\n  github [path] --apply --integrations  Include a broken skill/integration form\n  github [path] --apply --workflow  Add CI only when compatible and explicitly requested\n  doctor [path]       Check the verification command is configured\n  map [path] --check  Detect stale auto-generated map\n  map [path] --write  Refresh only the managed map section\n  locate <keywords>   Find candidate file paths\n  setup|dev|test|verify  Run configured argv; detect native commands before init\n  setup|dev|test|verify --record  Record process exit status; dev health is not inferred\n\n  --json              JSON output for most commands\n`;
+const HELP = `AgentRepo Kit ${VERSION}\n\nUsage: agentrepo <inspect|init|adopt|agents init|github|doctor|map|locate|setup|dev|test|verify> [path]\n\n  inspect [path]      Read-only detection of project commands and existing rules\n  init [path]         Add the full legacy scaffold; no install scripts run\n  init [path] --dry-run  Preview additions\n  agents init [path]  Add only AGENTS.md; preserve an existing file\n  agents init --dry-run  Preview the single-file install\n  adopt [path]        Same as read-only inspect for an existing project\n  adopt [path] --apply   Add the full legacy scaffold, preserving existing files\n  github [path]       Preview optional GitHub Issue, PR and changelog templates\n  github [path] --apply  Add missing GitHub templates only\n  github [path] --apply --integrations  Include a broken skill/integration form\n  github [path] --apply --workflow  Add CI only when compatible and explicitly requested\n  doctor [path]       Check the verification command is configured\n  map [path] --check  Detect stale auto-generated map\n  map [path] --write  Refresh only the managed map section\n  locate <keywords>   Find candidate file paths\n  setup|dev|test|verify  Run configured argv; detect native commands before init\n  setup|dev|test|verify --record  Record process exit status; dev health is not inferred\n\n  --json              JSON output for most commands\n`;
 function defaultWorkingDirectory() {
     return path.basename(path.dirname(SELF)) === ".agentrepo" ? path.dirname(path.dirname(SELF)) : process.cwd();
 }
@@ -538,7 +556,9 @@ export function main(argv = process.argv.slice(2), cwd = defaultWorkingDirectory
         output(VERSION, asJson);
         return 0;
     }
-    const where = cmd === 'locate' ? cwd : safeRoot(args.find((x, i) => i > 0 && !x.startsWith('--')) || cwd);
+    const where = cmd === 'locate' ? cwd : cmd === 'agents'
+        ? safeRoot(args.slice(2).find(x => !x.startsWith('--')) || cwd)
+        : safeRoot(args.find((x, i) => i > 0 && !x.startsWith('--')) || cwd);
     let result;
     try {
         switch (cmd) {
@@ -550,6 +570,10 @@ export function main(argv = process.argv.slice(2), cwd = defaultWorkingDirectory
                 break;
             case 'adopt':
                 result = args.includes('--apply') ? init(where, false) : inspect(where);
+                break;
+            case 'agents':
+                if (args[1] !== 'init') throw Error('Use: agentrepo agents init [path] [--dry-run]');
+                result = installAgents(where,args.includes('--dry-run'));
                 break;
             case 'github':
                 result = githubInit(where,args.includes('--apply'),args.includes('--workflow'),args.includes('--integrations'));
@@ -588,4 +612,4 @@ function invokedAsCLI() {
 }
 if (invokedAsCLI())
     process.exitCode = main();
-export { detect, plan, init, inspect, doctor, map, locate, execute, walk, directoryMap, githubPlan, githubInit };
+export { detect, plan, init, installAgents, inspect, doctor, map, locate, execute, walk, directoryMap, githubPlan, githubInit };

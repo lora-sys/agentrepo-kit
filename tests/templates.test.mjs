@@ -19,7 +19,8 @@ test('generated project AGENTS is self-sufficient without global modes or skills
  const root=work(t);init(root);const agents=read(root,'AGENTS.md');
  assert.ok(agents.split('\n').length<=150);
  assert.ok(agents.indexOf('遵守仓库已有规则')<agents.indexOf('## 工作方式'));
- for(const word of ['## 工作方式','## 安全边界','## 项目专属规则','沿用项目现有结构与命令']) assert.ok(agents.includes(word),word);
+ for(const word of ['## 工作方式','## 安全边界','沿用项目现有结构与命令','仅在安全且获授权时运行相关检查']) assert.ok(agents.includes(word),word);
+ assert.doesNotMatch(agents,/## 项目专属规则/);
  assert.doesNotMatch(agents,/lora-mode|全局 Skill|System Prompt|\.agentrepo\/cli\.mjs/);
  assert.ok(fs.existsSync(path.join(root,'.agentrepo/cli.mjs')));
  assert.equal(fs.existsSync(path.join(root,'.agents/skills')),false);
@@ -62,5 +63,5 @@ test('npm package includes every editable template and a standalone bundle',()=>
  const out=spawnSync('npm',['pack','--dry-run','--json'],{cwd:base,encoding:'utf8'});
  assert.equal(out.status,0,out.stderr);
  const names=JSON.parse(out.stdout)[0].files.map(x=>x.path);
- for(const name of ['src/agentrepo.mjs','scripts/build-cli.mjs','bin/agentrepo.mjs','templates/README.md','templates/AGENTS.project.md','templates/project/AGENTS.md','templates/project/README.md','templates/project/docs/architecture.md','templates/project/docs/development.md','templates/project/.env.example','templates/project/gitignore.tmpl','skills/agentrepo-setup/SKILL.md']) assert.ok(names.includes(name),`npm package missing ${name}`);
+ for(const name of ['src/agentrepo.mjs','scripts/build-cli.mjs','bin/agentrepo.mjs','templates/README.md','templates/AGENTS.project.md','templates/project/AGENTS.md','templates/project/README.md','templates/project/docs/architecture.md','templates/project/docs/development.md','templates/project/.env.example','templates/project/gitignore.tmpl','skills/agentrepo-setup/SKILL.md','skills/agentrepo-install/SKILL.md']) assert.ok(names.includes(name),`npm package missing ${name}`);
 });

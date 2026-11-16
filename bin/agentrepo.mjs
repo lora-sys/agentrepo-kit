@@ -231,7 +231,7 @@ function archBlock(root) {
     return lines.join('\n');
 }
 const PROJECT_TEMPLATES = Object.freeze({
-  "AGENTS.md": "# {{PROJECT_NAME}}\n\n遵守仓库已有规则和用户任务，只使用已确认的项目事实。\n\n## 工作方式\n\n- 阅读与任务相关的代码、测试和配置；沿用项目现有结构与命令。\n- 只做完成任务所需的改动；行为变化应更新测试。\n- 运行相关检查，并汇报改动文件、命令、结果及未验证事项。\n\n## 安全边界\n\n- 不改无关文件、CI、生产配置或公共接口。\n- 不暴露或提交密钥、生产数据；不编造事实或声称未运行的检查通过。\n\n## 项目专属规则\n\n只补充已确认且后续 Agent 确实需要的规则；没有则删除本节。\n",
+  "AGENTS.md": "# {{PROJECT_NAME}}\n\n遵守仓库已有规则和用户任务，只使用已确认的项目事实。\n\n## 工作方式\n\n- 阅读与任务相关的代码、测试和配置；沿用项目现有结构与命令。\n- 只做完成任务所需的改动；行为变化应更新测试。\n- 仅在安全且获授权时运行相关检查；汇报改动、命令、结果及未验证事项。\n\n## 安全边界\n\n- 对接口、依赖、CI、生产配置、提交和推送，仅在任务授权范围内操作。\n- 不暴露或提交密钥、生产数据；不编造事实或声称未运行的检查通过。\n",
   "README.md": "# {{PROJECT_NAME}}\n\n## 项目事实\n\n- 用途：待维护者确认。\n- 目标用户：待维护者确认。\n- 业务入口：见 `docs/architecture.md` 的源码证据，并由维护者确认业务含义。\n\n## 开发入口\n\n- [Agent 规则](AGENTS.md)\n- [代码地图与架构契约](docs/architecture.md)\n- [实际命令和环境](docs/development.md)\n\n在仓库根目录运行 `node .agentrepo/cli.mjs inspect` 查看检测依据。运行 `node .agentrepo/cli.mjs verify` 执行已配置的项目检查。\n",
   "docs/architecture.md": "# Architecture\n\n## 源码证据\n\n{{CODE_MAP}}\n\n## 经过确认的业务入口与模块契约\n\n本节由维护者根据任务和源码证据确认，不随 `map --write` 自动覆盖。导出符号与静态 import 是定位线索，不是已验证的业务职责或运行时调用关系。\n\n| 入口或模块 | 业务职责 | 公开契约 | 禁止依赖或修改范围 | 证据路径 |\n| --- | --- | --- | --- | --- |\n| 待确认 | 待确认 | 待确认 | 待确认 | 待确认 |\n\n## 验证\n\n- 新增、移动源文件或修改 import 后：`node .agentrepo/cli.mjs map --write`\n- 提交前：`node .agentrepo/cli.mjs map --check`\n- 确认的架构限制应加入现有 lint 或静态分析器，并纳入项目 `verify`。\n",
   "docs/development.md": "# Development\n\n## 技术栈证据\n\n{{STACK_LIST}}\n\n## 检测到的命令\n\n工作目录为仓库根目录。唯一可执行配置来源为 `agentrepo.json.commands`。\n\n| 场景 | 原始 argv | 检测状态 |\n| --- | --- | --- |\n{{COMMAND_ROWS}}\n\n`DETECTED_UNVERIFIED` 只表示仓库配置包含命令，不代表命令运行成功。`NOT_CONFIGURED` 表示未发现可执行命令。\n\n## 实际执行\n\n```sh\nnode .agentrepo/cli.mjs setup\nnode .agentrepo/cli.mjs dev\nnode .agentrepo/cli.mjs test\nnode .agentrepo/cli.mjs verify\n```\n\n执行后记录真实退出码、前置条件和未完成项。仅退出码为 0 的已执行检查可标为 `PASS`；其他结果保留 `FAIL` 或 `NOT_CONFIGURED`。\n\n## 最近一次验证证据\n\n对 `setup`、`dev`、`test`、`verify` 显式加 `--record` 才会记录进程退出码。未配置命令也会如实记录。`dev` 的进程退出不代表服务健康。普通执行不写文件。代码或测试变更后需重新验收，运行 `doctor` 可检测证据是否过期。\n\n<!-- agentrepo:verification:start -->\n未记录任何执行结果。状态：`NOT_VERIFIED`。\n<!-- agentrepo:verification:end -->\n\n## 检测警告\n\n{{COMMAND_WARNINGS}}\n\n## 本地服务与环境变量\n\n待维护者确认：必需服务、启动顺序、端口来源、测试数据、环境变量含义。`.env.example` 只填写非敏感变量名，不放真实凭据。\n",
@@ -260,6 +260,24 @@ function renderTemplate(name, fields={}) {
 }
 function manual(root) { return renderTemplate('docs/architecture.md', {CODE_MAP:archBlock(root)}); }
 function agents(root) { return renderTemplate('AGENTS.md', {PROJECT_NAME:path.basename(root)}); }
+function installAgents(root, dry=false) {
+    if (exists(root) && !isRealDir(root)) throw Error('Target path is not a directory');
+    const target=path.join(root,'AGENTS.md');
+    try {
+        fs.lstatSync(target);
+        return {ok:true,status:'PRESERVED',path:target,reason:'AGENTS.md already exists'};
+    } catch (e) { if (e.code !== 'ENOENT') throw e; }
+    protect(root,'AGENTS.md');
+    if (dry) return {ok:true,status:'WOULD_CREATE',path:target};
+    fs.mkdirSync(root,{recursive:true});
+    try {
+        fs.writeFileSync(target,agents(root),{flag:'wx',mode:0o644});
+    } catch (e) {
+        if (e.code === 'EEXIST') return {ok:true,status:'PRESERVED',path:target,reason:'AGENTS.md appeared during installation'};
+        throw e;
+    }
+    return {ok:true,status:'CREATED',path:target};
+}
 function development(found) {
     const rows=['setup','dev','test','verify'].map(name=>{
         const commands=found.commands[name];
@@ -537,7 +555,7 @@ else if (typeof o === 'string')
     process.stdout.write(o + '\n');
 else
     process.stdout.write(JSON.stringify(o, null, 2) + '\n'); }
-const HELP = `AgentRepo Kit ${VERSION}\n\nUsage: agentrepo <inspect|init|adopt|github|doctor|map|locate|setup|dev|test|verify> [path]\n\n  inspect [path]      Read-only detection of project commands and existing rules\n  init [path]         Add only missing essentials; no install scripts run\n  init [path] --dry-run  Preview additions\n  adopt [path]        Same as read-only inspect for an existing project\n  adopt [path] --apply   Add missing files, preserving all existing files\n  github [path]       Preview optional GitHub Issue, PR and changelog templates\n  github [path] --apply  Add missing GitHub templates only\n  github [path] --apply --integrations  Include a broken skill/integration form\n  github [path] --apply --workflow  Add CI only when compatible and explicitly requested\n  doctor [path]       Check the verification command is configured\n  map [path] --check  Detect stale auto-generated map\n  map [path] --write  Refresh only the managed map section\n  locate <keywords>   Find candidate file paths\n  setup|dev|test|verify  Run configured argv; detect native commands before init\n  setup|dev|test|verify --record  Record process exit status; dev health is not inferred\n\n  --json              JSON output for most commands\n`;
+const HELP = `AgentRepo Kit ${VERSION}\n\nUsage: agentrepo <inspect|init|adopt|agents init|github|doctor|map|locate|setup|dev|test|verify> [path]\n\n  inspect [path]      Read-only detection of project commands and existing rules\n  init [path]         Add the full legacy scaffold; no install scripts run\n  init [path] --dry-run  Preview additions\n  agents init [path]  Add only AGENTS.md; preserve an existing file\n  agents init --dry-run  Preview the single-file install\n  adopt [path]        Same as read-only inspect for an existing project\n  adopt [path] --apply   Add the full legacy scaffold, preserving existing files\n  github [path]       Preview optional GitHub Issue, PR and changelog templates\n  github [path] --apply  Add missing GitHub templates only\n  github [path] --apply --integrations  Include a broken skill/integration form\n  github [path] --apply --workflow  Add CI only when compatible and explicitly requested\n  doctor [path]       Check the verification command is configured\n  map [path] --check  Detect stale auto-generated map\n  map [path] --write  Refresh only the managed map section\n  locate <keywords>   Find candidate file paths\n  setup|dev|test|verify  Run configured argv; detect native commands before init\n  setup|dev|test|verify --record  Record process exit status; dev health is not inferred\n\n  --json              JSON output for most commands\n`;
 function defaultWorkingDirectory() {
     return path.basename(path.dirname(SELF)) === ".agentrepo" ? path.dirname(path.dirname(SELF)) : process.cwd();
 }
@@ -553,7 +571,9 @@ export function main(argv = process.argv.slice(2), cwd = defaultWorkingDirectory
         output(VERSION, asJson);
         return 0;
     }
-    const where = cmd === 'locate' ? cwd : safeRoot(args.find((x, i) => i > 0 && !x.startsWith('--')) || cwd);
+    const where = cmd === 'locate' ? cwd : cmd === 'agents'
+        ? safeRoot(args.slice(2).find(x => !x.startsWith('--')) || cwd)
+        : safeRoot(args.find((x, i) => i > 0 && !x.startsWith('--')) || cwd);
     let result;
     try {
         switch (cmd) {
@@ -565,6 +585,10 @@ export function main(argv = process.argv.slice(2), cwd = defaultWorkingDirectory
                 break;
             case 'adopt':
                 result = args.includes('--apply') ? init(where, false) : inspect(where);
+                break;
+            case 'agents':
+                if (args[1] !== 'init') throw Error('Use: agentrepo agents init [path] [--dry-run]');
+                result = installAgents(where,args.includes('--dry-run'));
                 break;
             case 'github':
                 result = githubInit(where,args.includes('--apply'),args.includes('--workflow'),args.includes('--integrations'));
@@ -603,4 +627,4 @@ function invokedAsCLI() {
 }
 if (invokedAsCLI())
     process.exitCode = main();
-export { detect, plan, init, inspect, doctor, map, locate, execute, walk, directoryMap, githubPlan, githubInit };
+export { detect, plan, init, installAgents, inspect, doctor, map, locate, execute, walk, directoryMap, githubPlan, githubInit };

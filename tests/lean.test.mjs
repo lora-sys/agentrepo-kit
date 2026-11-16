@@ -20,6 +20,17 @@ test('empty repo: readonly inspection; init adds a short skeleton, no fake runna
  assert.equal(init(root).created.length,0);
 });
 
+test('agents init writes one file, supports dry-run, and preserves existing AGENTS.md',t=>{
+ const r=tmp(t);write(r,'README.md','# existing\n');
+ const dry=spawnSync(process.execPath,[cli,'agents','init',r,'--dry-run','--json'],{encoding:'utf8'});
+ assert.equal(dry.status,0,dry.stderr);assert.equal(JSON.parse(dry.stdout).status,'WOULD_CREATE');assert.equal(fs.existsSync(path.join(r,'AGENTS.md')),false);
+ const applied=spawnSync(process.execPath,[cli,'agents','init',r,'--json'],{encoding:'utf8'});
+ assert.equal(applied.status,0,applied.stderr);assert.equal(JSON.parse(applied.stdout).status,'CREATED');
+ assert.deepEqual(fs.readdirSync(r).sort(),['AGENTS.md','README.md']);assert.match(read(r,'AGENTS.md'),/^# agentrepo-lean-/);
+ const original=read(r,'AGENTS.md');const repeat=spawnSync(process.execPath,[cli,'agents','init',r,'--json'],{encoding:'utf8'});
+ assert.equal(repeat.status,0,repeat.stderr);assert.equal(JSON.parse(repeat.stdout).status,'PRESERVED');assert.equal(read(r,'AGENTS.md'),original);
+});
+
 test('node package: pnpm and scripts recognized without inventing commands',t=>{
  const r=tmp(t);write(r,'package.json',JSON.stringify({name:'demo',packageManager:'pnpm@9.4.0',scripts:{dev:'vite',test:'node --test',lint:'eslint src',typecheck:'tsc --noEmit'}}));write(r,'pnpm-lock.yaml','lockfileVersion: "9.0"\n');
  const d=detect(r);assert.equal(d.packageManager,'pnpm');assert.deepEqual(d.commands.setup,[['pnpm','install','--frozen-lockfile']]);assert.deepEqual(d.commands.verify,[['pnpm','run','lint'],['pnpm','run','typecheck'],['pnpm','run','test']]);assert.deepEqual(d.commands.dev,[['pnpm','run','dev']]);
@@ -77,7 +88,7 @@ test('code locator finds paths without reading or changing business content',t=>
 });
 
 test('CLI help explains limited scope and machine-readable inspect response',t=>{
- const r=tmp(t);const h=execFileSync(process.execPath,[cli,'--help'],{encoding:'utf8'});assert.match(h,/inspect\|init\|adopt/);const o=JSON.parse(execFileSync(process.execPath,[cli,'inspect',r,'--json'],{encoding:'utf8'}));assert.equal(o.proposedFiles.includes('AGENTS.md'),true);
+ const r=tmp(t);const h=execFileSync(process.execPath,[cli,'--help'],{encoding:'utf8'});assert.match(h,/inspect\|init\|adopt/);assert.match(h,/agents init/);const o=JSON.parse(execFileSync(process.execPath,[cli,'inspect',r,'--json'],{encoding:'utf8'}));assert.equal(o.proposedFiles.includes('AGENTS.md'),true);
 });
 
 test('new project path can be dry-run without writing then initialized',t=>{
@@ -104,7 +115,9 @@ test('existing project with no test runner does not claim ready',t=>{
 test('template AGENTS and development docs use existing project commands and policy priority',t=>{
  const r=tmp(t);init(r);const agents=read(r,'AGENTS.md');const dev=read(r,'docs/development.md');
  assert.match(agents,/遵守仓库已有规则/);
- assert.match(agents,/沿用项目现有结构与命令/);assert.match(dev,/NOT_CONFIGURED/);
+ assert.match(agents,/沿用项目现有结构与命令/);
+ assert.match(agents,/仅在安全且获授权时运行相关检查/);
+ assert.match(agents,/接口、依赖、CI、生产配置、提交和推送/);assert.match(dev,/NOT_CONFIGURED/);
  assert.doesNotMatch(agents,/System Prompt|Zero-shot|Attention|\.agentrepo\/cli\.mjs/);
 });
 
@@ -130,6 +143,7 @@ test('project AGENTS contains project-only entry and no generic workflow duplica
  assert.match(agents,/^## 工作方式/m);
  assert.ok(agents.indexOf('遵守仓库已有规则')<agents.indexOf('## 工作方式'));
  assert.match(agents,/沿用项目现有结构与命令/);
+ assert.doesNotMatch(agents,/## 项目专属规则/);
  assert.doesNotMatch(agents,/For bugs and behavior changes|lora-mode|通用 Skill|\.agentrepo\/cli\.mjs/);
  assert.doesNotMatch(agents,/pnpm|npm test|node --test/);
 });
