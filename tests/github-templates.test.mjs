@@ -89,3 +89,9 @@ test('GitHub: templates are first-class sources and the setup Skill has no exter
  const names=JSON.parse(p.stdout)[0].files.map(x=>x.path);
  for(const n of ['skills/agentrepo-setup/SKILL.md','templates/github/ISSUE_TEMPLATE/bug_report.yml','templates/github/workflows/agentrepo-ci.yml'])assert.ok(names.includes(n),n);
 });
+
+
+test('GitHub: question form automatically requests the question label',t=>{
+ const r=tmp(t);githubInit(r,true);
+ assert.match(get(r,'.github/ISSUE_TEMPLATE/question.yml'),/^labels: \[question\]$/m);
+});
