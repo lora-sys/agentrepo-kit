@@ -1,30 +1,31 @@
 ---
 name: agentrepo-setup
-description: Make a new or existing repository legible, executable and verifiable using real source evidence and runnable project checks. Independent of npm, AgentRepo CLI and other skills.
+description: Take over a new or existing code repository for agent-assisted development. Use to orient an agent in a repository, add a concise AGENTS.md from the included template, and select optional templates only when the project needs them.
 ---
 
 # AgentRepo setup
 
-Work in the target repository. Preserve existing project rules. This Skill can be used without the AgentRepo CLI or any global agent framework.
+Use this Skill to make a repository understandable and workable for coding agents without turning it into a governance system. “Take over” means taking responsibility for understanding the repository and carrying out the requested development task; it does not authorize unrelated rewrites or operational changes.
 
-## Inspect first
+## Workflow
 
-1. Read the existing `AGENTS.md`, `README.md`, package/build configuration and relevant tests. Follow original project constraints.
-2. Locate actual code entrypoints and related tests using source search. For each finding record a file path and line number. Confirm behavior in code before labeling an entrypoint.
-3. Trace observable imports and callers. Distinguish static import evidence from runtime calls and inferred architecture; leave unverified responsibilities explicitly unconfirmed.
-4. Read setup, dev, test and verify commands from the native project configuration. Classify each as `NOT_CONFIGURED`, `DETECTED_UNVERIFIED`, `PASS`, or `FAIL`. Review side effects before executing setup or dev commands.
-5. For an existing repository, show which files need creation, which must be preserved, and which facts require maintainer review. Get approval before writing.
+1. Read the user's task and the repository's existing `AGENTS.md`, `README.md`, and relevant project configuration. Follow repository-specific instructions first.
+2. Inspect only the code, tests, and configuration relevant to the task. Identify actual entry points and commands from source and project files; do not invent project facts.
+3. If `AGENTS.md` is missing and repository guidance is useful, create it from `templates/project/AGENTS.md`. Fill only verified details. If an `AGENTS.md` already exists, preserve it unless the user asks to revise it.
+4. Use files under `templates/project/` only when a concrete need exists or the user asks for them. Do not scaffold every template by default. In particular, architecture and development documents are optional; do not create them just to document an ordinary repository.
+5. Make the smallest task-relevant change. Reuse the repository's existing scripts, package manager, tests, and lint commands. Do not add a second command system or new CI for convenience.
+6. Run the smallest relevant existing check. Report changed files, the exact commands actually run, their outcomes, and any important unknowns.
 
-## Apply after approval
+## Repository boundaries
 
-- Keep the existing `AGENTS.md` unchanged. If missing, write one short agent entry with context paths, task scope and actual verification commands.
-- Populate `docs/architecture.md` with source-backed entrypoints, module paths, test references and evidence. Do not invent contracts, import edges or project goals.
-- Populate `docs/development.md` with runnable commands, their configuration source, executed exit codes and prerequisites. Use `NOT_CONFIGURED` for missing commands.
-- Reuse existing build scripts, lint and CI. Do not add a duplicate command system or an unapproved workflow.
-- Run the smallest relevant real verification command. When the generated development document is present, explicitly run `node .agentrepo/cli.mjs verify --record` to record an actual result. If no command exists, report the gap rather than claiming the project is ready.
+- Preserve existing project rules, documentation, CI, and public interfaces unless the task calls for a change.
+- Do not claim an unrun command passed. If no suitable check exists, say so instead of inventing one.
+- Do not read, print, or commit real secrets or production data.
+- Ask before destructive changes, production or release actions, or other high-impact work outside the user's explicit request.
+- Put stable, project-specific guidance in `AGENTS.md` only when it is verified and useful for future tasks. Keep task plans and temporary findings out of permanent repository policy.
 
-## Acceptance
+## Optional capabilities
 
-Try one real, small repository task: find code, confirm impact scope, update a test or behavior and run the relevant check. Report the touched files, exact commands, exit status and remaining unknowns. Template creation alone is not acceptance.
-
-GitHub community templates are an optional separate workflow. Use `skills/agentrepo-github/SKILL.md` only when requested.
+- Browse `templates/README.md` for the template catalog and selection guidance.
+- Use `skills/agentrepo-github/SKILL.md` only when GitHub collaboration templates are requested.
+- The AgentRepo CLI is optional. This Skill does not require it, and a repository does not need `.agentrepo/`, `agentrepo.json`, generated maps, verification ledgers, or new workflows to be agent-friendly.

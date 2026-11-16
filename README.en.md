@@ -1,46 +1,42 @@
 # AgentRepo Kit
 
-Make a repository **legible, executable, and verifiable** for coding agents. Node.js 20+. Zero third-party runtime dependencies.
+An **agent repository takeover Skill** with a small library of optional templates. The goal is not to install a governance system in every project. It is to help an agent understand a repository, work with its existing conventions, and verify the change it actually made.
 
-## Quick start
+## Default workflow
+
+Start with [`skills/agentrepo-setup/SKILL.md`](skills/agentrepo-setup/SKILL.md) when an agent needs to take over a new or existing repository.
+
+Use [`templates/project/AGENTS.md`](templates/project/AGENTS.md) only when a useful agent entry point is missing. Select any other file from [`templates/`](templates/README.md) only when the repository has a concrete need. Preserve existing rules, docs, commands, and CI rather than filling out a checklist.
+
+The Skill does not require the AgentRepo CLI. It does not require a generated code map, verification ledger, new CI, or a second command system. Agents should use the project's existing development and test commands.
+
+## One-command AGENTS.md install
+
+After this change is merged, run this from the target repository root (Node.js 20+ and network access required):
 
 ```sh
+npx --yes github:lora-sys/agentrepo-kit agents init
+```
+
+Add `--dry-run` to preview. The command creates only `AGENTS.md` and preserves an existing file. The npm package is not published yet, so npx installs directly from GitHub. See the [`agentrepo-install` Skill](skills/agentrepo-install/SKILL.md) for the full workflow.
+
+## Templates
+
+The template library includes optional project README, architecture and development docs, environment examples, `.gitignore`, and GitHub collaboration templates. They are resources, not a default installation bundle. See [`templates/README.md`](templates/README.md) for selection guidance.
+
+## Optional CLI
+
+The repository retains the AgentRepo CLI for users who need automated inspection, adoption previews, command execution, code maps, or GitHub template previews. The CLI is not required by the Skill.
+
+```sh
+node bin/agentrepo.mjs agents init /path/to/project
 node bin/agentrepo.mjs inspect /path/to/project
-node bin/agentrepo.mjs verify /path/to/project
-node bin/agentrepo.mjs init /path/to/project --dry-run
-node bin/agentrepo.mjs init /path/to/project
+node bin/agentrepo.mjs adopt /path/to/project
+node bin/agentrepo.mjs adopt /path/to/project --apply
+node bin/agentrepo.mjs --help
 ```
 
-`inspect` reads existing rules and detects the native toolchain. Detected commands remain `DETECTED_UNVERIFIED` until executed. `verify` can run detected native tests even before initialization. `init` installs only missing files, never overwrites project-owned instructions or CI, and never runs setup scripts.
-
-After initialization:
-
-```sh
-cd /path/to/project
-node .agentrepo/cli.mjs setup
-node .agentrepo/cli.mjs dev
-node .agentrepo/cli.mjs test
-node .agentrepo/cli.mjs verify
-```
-
-Commands live in `agentrepo.json.commands` as arrays of argv arrays. Unknown commands stay `null`; missing verification is a failure, not a pass.
-
-## Existing repositories
-
-```sh
-node bin/agentrepo.mjs adopt /path/to/existing-project
-node bin/agentrepo.mjs adopt /path/to/existing-project --apply
-```
-
-The first command is read-only. The second adds missing files. Existing README, AGENTS, docs, workflows, source and tests remain unchanged. Review the integration note if AGENTS already exists.
-
-## Installed files
-
-A short `AGENTS.md`, one-page `docs/architecture.md`, `docs/development.md`, `agentrepo.json`, and a standalone `.agentrepo/cli.mjs`. README, `.env.example`, and `.gitignore` are created only as needed. No HTML diagrams, project-level evaluation framework, or new CI workflows are installed by default.
-
-## Source evidence
-
-`node .agentrepo/cli.mjs locate "duplicate email"` searches filenames and source text, returning the matching line. `docs/architecture.md` records configured entrypoints, resolvable static import references and test references with source locations. This is a partial static index, not a complete call graph.
+`agents init` installs only `AGENTS.md`. The historical `init` / `adopt --apply` scaffold may still create several helper files.
 
 ## Development
 
@@ -49,18 +45,6 @@ npm test
 npm run check
 ```
 
+After editing the Skill, templates, or CLI, run the relevant checks. Template source files live in `templates/`; `npm run build:cli` and `npm run check` manage the CLI bundle and its consistency check.
+
 See [Architecture](docs/ARCHITECTURE.zh-CN.md), [Contributing](CONTRIBUTING.md), and [MIT License](LICENSE).
-
-The previous governance and evaluation implementation is preserved in the `archive/pre-lean-v1` branch.
-
-## Standalone project templates
-
-No global skills or external agent modes are required. The generated `AGENTS.md` contains the complete task workflow and verification rules. Edit `templates/project/` for scaffold source text and run `npm run build:cli` to regenerate the self-contained CLI. Project-specific rules can be added using `templates/AGENTS.project.md`.
-
-## Optional GitHub collaboration templates
-
-No npm installation is required. Follow the optional [GitHub Skill](skills/agentrepo-github/SKILL.md) and edit [GitHub Issue Forms and PR templates](templates/github/). Or run `node bin/agentrepo.mjs github /path/to/repo` to preview and add `--apply` to install only missing templates. CI requires separate `--workflow` approval and existing executable setup/verify commands.
-
-## Verification evidence
-
-Use `--record` with `setup`, `test`, or `verify` to save actual exit codes to the managed section of `docs/development.md`. `doctor` reports whether the recorded source fingerprint is still current.
