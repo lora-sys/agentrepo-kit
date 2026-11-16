@@ -16,5 +16,6 @@ AgentRepo 的默认工作流是先理解仓库，再按需补充内容。模板�
 - [`project/.env.example`](project/.env.example) 和 [`project/gitignore.tmpl`](project/gitignore.tmpl)：仅在项目存在相应需求且没有现成文件时使用。绝不放入真实密钥。
 - [`AGENTS.project.md`](AGENTS.project.md)：为已有项目指令补充经过确认的专属约束时参考。
 - [`github/`](github/)：GitHub Issue、PR 和 Changelog 模板。是否使用由独立的 GitHub Skill 决定。
+- [`../skills/agentrepo-install/templates/agentrepo-template-update-check.yml`](../skills/agentrepo-install/templates/agentrepo-template-update-check.yml)：用户明确要求时使用，默认每周只读检查上游模板更新；只报告差异，不自动改写项目文件。
 
-不需要模板时，什么也不用生成。不要为了“对 Agent 友好”而引入重复文档、额外 CLI、自动地图、状态台账或新 CI。
+不需要模板时，什么也不用生成。不要默认引入重复文档、额外 CLI、自动地图、状态台账或新 CI；上游模板更新提醒也必须由用户明确启用。
