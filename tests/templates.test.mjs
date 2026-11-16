@@ -59,9 +59,18 @@ test('bundled CLI can initialize another project without template files',t=>{
  assert.ok(read(b,'docs/development.md').includes('NOT_CONFIGURED'));
 });
 
+test('optional upstream template monitor is weekly, manually triggerable, and read-only',()=>{
+ const workflow=read(base,'skills/agentrepo-install/templates/agentrepo-template-update-check.yml');
+ const skill=read(base,'skills/agentrepo-install/SKILL.md');
+ assert.match(workflow,/schedule:/);assert.match(workflow,/workflow_dispatch:/);
+ assert.match(workflow,/permissions: \{\}/);assert.match(workflow,/BASE_TEMPLATE_SHA/);assert.match(workflow,/diff -u/);
+ assert.doesNotMatch(workflow,/contents:\s*write|secrets\.|gh pr create/);
+ assert.match(skill,/does not read, modify, commit, or open a PR/);
+});
+
 test('npm package includes every editable template and a standalone bundle',()=>{
  const out=spawnSync('npm',['pack','--dry-run','--json'],{cwd:base,encoding:'utf8'});
  assert.equal(out.status,0,out.stderr);
  const names=JSON.parse(out.stdout)[0].files.map(x=>x.path);
- for(const name of ['src/agentrepo.mjs','scripts/build-cli.mjs','bin/agentrepo.mjs','templates/README.md','templates/AGENTS.project.md','templates/project/AGENTS.md','templates/project/README.md','templates/project/docs/architecture.md','templates/project/docs/development.md','templates/project/.env.example','templates/project/gitignore.tmpl','skills/agentrepo-setup/SKILL.md','skills/agentrepo-install/SKILL.md']) assert.ok(names.includes(name),`npm package missing ${name}`);
+ for(const name of ['src/agentrepo.mjs','scripts/build-cli.mjs','bin/agentrepo.mjs','templates/README.md','templates/AGENTS.project.md','templates/project/AGENTS.md','templates/project/README.md','templates/project/docs/architecture.md','templates/project/docs/development.md','templates/project/.env.example','templates/project/gitignore.tmpl','skills/agentrepo-setup/SKILL.md','skills/agentrepo-install/SKILL.md','skills/agentrepo-install/templates/agentrepo-template-update-check.yml']) assert.ok(names.includes(name),`npm package missing ${name}`);
 });
