@@ -60,3 +60,7 @@ No global skills or external agent modes are required. The generated `AGENTS.md`
 ## Optional GitHub collaboration templates
 
 No npm installation is required. Follow the optional [GitHub Skill](skills/agentrepo-github/SKILL.md) and edit [GitHub Issue Forms and PR templates](templates/github/). Or run `node bin/agentrepo.mjs github /path/to/repo` to preview and add `--apply` to install only missing templates. CI requires separate `--workflow` approval and existing executable setup/verify commands.
+
+## Verification evidence
+
+Use `--record` with `setup`, `test`, or `verify` to save actual exit codes to the managed section of `docs/development.md`. `doctor` reports whether the recorded source fingerprint is still current.

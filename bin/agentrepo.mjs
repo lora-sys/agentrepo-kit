@@ -146,7 +146,7 @@ function tableCell(value) {
     return String(value).replace(/\|/g,'\\|').replace(/[\r\n]+/g,' ').replace(/`/g,'\\`');
 }
 function staticCodeFacts(root, allFiles=walk(root)) {
-    const all=new Set(allFiles), entries=[], refs=[], tests=[];
+    const all=new Set(allFiles), entries=[], refs=[], tests=[], exports=[];
     const pkgFile=path.join(root,'package.json');
     if(isRealFile(pkgFile)) {
         try {
@@ -154,6 +154,12 @@ function staticCodeFacts(root, allFiles=walk(root)) {
             const candidates=[];
             for(const key of ['main','module']) if(typeof pkg[key]==='string') candidates.push([key,pkg[key]]);
             if(typeof pkg.bin==='string') candidates.push(['bin',pkg.bin]);
+            const visitExports=(value,key,depth=0)=>{
+                if(depth>5)return;
+                if(typeof value==='string'){candidates.push([key,value]);return;}
+                if(value && typeof value==='object')for(const [k,v] of Object.entries(value))visitExports(v,`${key}.${k}`,depth+1);
+            };
+            if(pkg.exports)visitExports(pkg.exports,'exports');
             else if(pkg.bin && typeof pkg.bin==='object') for(const [name,value] of Object.entries(pkg.bin))
                 if(typeof value==='string') candidates.push([`bin.${name}`,value]);
             for(const [key,value] of candidates) {
@@ -170,6 +176,13 @@ function staticCodeFacts(root, allFiles=walk(root)) {
         const body=readSource(root,file);
         if(body===null) continue;
         for(const [i,line] of body.split(/\r?\n/).entries()) {
+            const declaration=line.match(/^\s*export\s+(?:default\s+)?(?:async\s+)?(?:function\s*\*?|class\s+|const\s+|let\s+|var\s+|interface\s+|type\s+|enum\s+)([A-Za-z_$][\w$]*)/);
+            if(declaration)exports.push({file,name:declaration[1],line:i+1,kind:'export declaration'});
+            const reexport=line.match(/^\s*export\s*\{([^}]+)\}/);
+            if(reexport)for(const token of reexport[1].split(',')){
+                const name=token.trim().split(/\s+as\s+/i).at(-1);
+                if(/^[A-Za-z_$][\w$]*$/.test(name))exports.push({file,name,line:i+1,kind:'named export'});
+            }
             const patterns=[/\b(?:import|export)\s+(?:[^'";]*?\s+from\s*)?['"](\.[^'"\s]+)['"]/g, /\b(?:require|import)\s*\(\s*['"](\.[^'"\s]+)['"]\s*\)/g];
             for(const regex of patterns) {
                 let m;
@@ -187,7 +200,9 @@ function staticCodeFacts(root, allFiles=walk(root)) {
     }
     const uniq=arr=>[...new Map(arr.map(a=>[`${a.from}|${a.to}|${a.line}`,a])).values()];
     const uniqueRefs=uniq(refs), uniqueTests=uniq(tests);
-    return {entries:entries.slice(0,30),refs:uniqueRefs.slice(0,30),tests:uniqueTests.slice(0,20),truncated:truncated||entries.length>30||uniqueRefs.length>30||uniqueTests.length>20};
+    return {entries:entries.slice(0,30),refs:uniqueRefs.slice(0,30),tests:uniqueTests.slice(0,20),
+        exports:exports.slice(0,50),
+        truncated:truncated||entries.length>30||uniqueRefs.length>30||uniqueTests.length>20||exports.length>50};
 }
 function sourceDigest(root, files=walk(root), facts=staticCodeFacts(root,files)) {
     return crypto.createHash('sha256').update(JSON.stringify({m:directoryMap(root),files:files.filter(readableSourceFile),facts})).digest('hex').slice(0,16);
@@ -199,7 +214,14 @@ function archBlock(root) {
         ...(d.length?d.map(x=>`| \`${tableCell(x.path)}\` | ${x.files} | 当前文件树 |`):['| 暂无已识别源码目录 | 0 | 当前文件树 |']),
         '', '### 已配置的代码入口','', '| File | Evidence |','| --- | --- |',
         ...(facts.entries.length?facts.entries.map(x=>`| \`${tableCell(x.path)}\` | \`${tableCell(x.evidence)}\` |`):['| 未识别到可确认的入口 | 待维护者核对 |']),
-        '', '### 静态导入证据','', '只记录源码中可解析、且目标文件存在的相对 import/require。不是完整调用图。','',
+        '', '### 代码导出与测试位置','',
+        '导出符号仅代表可在源码中定位的声明，不代表已确认的公共 API 或业务职责。关联测试仅限可解析的直接相对 import。','',
+        '| Export | Source | Direct test reference |', '| --- | --- | --- |',
+        ...(facts.exports.length?facts.exports.map(x=>{
+            const related=facts.tests.filter(t=>t.to===x.file).slice(0,3);
+            return `| \`${tableCell(x.name)}\` | \`${tableCell(x.file)}:${x.line}\` | ${related.length?related.map(t=>`\`${tableCell(t.from)}:${t.line}\``).join('、'):'未发现直接测试引用'} |`;
+        }):['| 未识别到导出声明 | 待源码审查 | 未知 |']),
+        '', '### 静态导入证据','', '只扫描部分 JavaScript/TypeScript 静态相对 import/require，并确认目标文件存在。动态调用、跨语言依赖和间接调用未覆盖；不是完整调用图。','',
         '| Importer | Target | Source line |','| --- | --- | --- |',
         ...(facts.refs.length?facts.refs.map(x=>`| \`${tableCell(x.from)}\` | \`${tableCell(x.to)}\` | \`${tableCell(x.from)}:${x.line}\` |`):['| 未识别到关系 | 待代码审查或使用语言分析器 | 不适用 |']),
         '', '### 测试引用证据','', '| Test | Referenced source | Source line |','| --- | --- | --- |',
@@ -211,8 +233,8 @@ function archBlock(root) {
 const PROJECT_TEMPLATES = Object.freeze({
   "AGENTS.md": "# {{PROJECT_NAME}}\n\n## 优先级\n\n先遵守本仓库已有的明确限制和任务授权。项目专属约束经维护者确认后写在本文件；通用执行步骤如下。不要用模板内容覆盖已有规则。\n\n## 项目上下文\n\n- 项目目标与使用者：`README.md`。\n- 模块入口与边界：`docs/architecture.md`。\n- 环境与命令：`docs/development.md`；可执行配置以 `agentrepo.json.commands` 为准。\n- 工作目录：仓库根目录。只读取任务相关的文件与测试。\n\n## 执行步骤\n\n1. 读取任务要求、相关代码和现有测试；通过 `node .agentrepo/cli.mjs locate \"关键词\"` 辅助定位。\n2. 确认影响的入口、调用方及公开接口；修改范围限制在任务相关文件。\n3. 对行为变化补充或修改能验证结果的测试；按仓库既有约定执行。\n4. 执行 `node .agentrepo/cli.mjs verify`；源码目录变化后执行 `node .agentrepo/cli.mjs map --check`。\n5. 报告修改的文件、实际运行的命令和退出状态。`PASS`、`FAIL`、`NOT_CONFIGURED` 不得混用。\n\n## 安全边界\n\n- 未获明确授权，不修改生产配置、发布流程、CI 或现有公共接口契约。\n- 不读取、打印或提交真实密钥和生产数据。\n- 不编造模块职责、依赖关系、命令结果及未执行的测试。\n- 验证失败或未配置时，明确报告并停止声称任务已验收。\n\n## 项目专属约束\n\n维护者确认高风险的业务不变量、禁止操作及替代动作后补充；没有确认前不要推断。\n",
   "README.md": "# {{PROJECT_NAME}}\n\n## 项目事实\n\n- 用途：待维护者确认。\n- 目标用户：待维护者确认。\n- 业务入口：见 `docs/architecture.md` 的源码证据，并由维护者确认业务含义。\n\n## 开发入口\n\n- [Agent 规则](AGENTS.md)\n- [代码地图与架构契约](docs/architecture.md)\n- [实际命令和环境](docs/development.md)\n\n在仓库根目录运行 `node .agentrepo/cli.mjs inspect` 查看检测依据。运行 `node .agentrepo/cli.mjs verify` 执行已配置的项目检查。\n",
-  "docs/architecture.md": "# Architecture\n\n## 源码证据\n\n{{CODE_MAP}}\n\n## 业务入口与模块契约\n\n以下信息需结合业务行为和源码审查后填写。静态 import 证据不等于运行时调用关系。\n\n| 入口或模块 | 业务职责 | 公开契约 | 禁止依赖或修改范围 | 证据路径 |\n| --- | --- | --- | --- | --- |\n| 待确认 | 待确认 | 待确认 | 待确认 | 待确认 |\n\n## 验证\n\n- 新增、移动源文件或修改 import 后：`node .agentrepo/cli.mjs map --write`\n- 提交前：`node .agentrepo/cli.mjs map --check`\n- 确认的架构限制应加入现有 lint 或静态分析器，并纳入项目 `verify`。\n",
-  "docs/development.md": "# Development\n\n## 技术栈证据\n\n{{STACK_LIST}}\n\n## 检测到的命令\n\n工作目录为仓库根目录。唯一可执行配置来源为 `agentrepo.json.commands`。\n\n| 场景 | 原始 argv | 检测状态 |\n| --- | --- | --- |\n{{COMMAND_ROWS}}\n\n`DETECTED_UNVERIFIED` 只表示仓库配置包含命令，不代表命令运行成功。`NOT_CONFIGURED` 表示未发现可执行命令。\n\n## 实际执行\n\n```sh\nnode .agentrepo/cli.mjs setup\nnode .agentrepo/cli.mjs dev\nnode .agentrepo/cli.mjs test\nnode .agentrepo/cli.mjs verify\n```\n\n执行后记录真实退出码、前置条件和未完成项。仅退出码为 0 的已执行检查可标为 `PASS`；其他结果保留 `FAIL` 或 `NOT_CONFIGURED`。\n\n## 检测警告\n\n{{COMMAND_WARNINGS}}\n\n## 本地服务与环境变量\n\n待维护者确认：必需服务、启动顺序、端口来源、测试数据、环境变量含义。`.env.example` 只填写非敏感变量名，不放真实凭据。\n",
+  "docs/architecture.md": "# Architecture\n\n## 源码证据\n\n{{CODE_MAP}}\n\n## 经过确认的业务入口与模块契约\n\n本节由维护者根据任务和源码证据确认，不随 `map --write` 自动覆盖。导出符号与静态 import 是定位线索，不是已验证的业务职责或运行时调用关系。\n\n| 入口或模块 | 业务职责 | 公开契约 | 禁止依赖或修改范围 | 证据路径 |\n| --- | --- | --- | --- | --- |\n| 待确认 | 待确认 | 待确认 | 待确认 | 待确认 |\n\n## 验证\n\n- 新增、移动源文件或修改 import 后：`node .agentrepo/cli.mjs map --write`\n- 提交前：`node .agentrepo/cli.mjs map --check`\n- 确认的架构限制应加入现有 lint 或静态分析器，并纳入项目 `verify`。\n",
+  "docs/development.md": "# Development\n\n## 技术栈证据\n\n{{STACK_LIST}}\n\n## 检测到的命令\n\n工作目录为仓库根目录。唯一可执行配置来源为 `agentrepo.json.commands`。\n\n| 场景 | 原始 argv | 检测状态 |\n| --- | --- | --- |\n{{COMMAND_ROWS}}\n\n`DETECTED_UNVERIFIED` 只表示仓库配置包含命令，不代表命令运行成功。`NOT_CONFIGURED` 表示未发现可执行命令。\n\n## 实际执行\n\n```sh\nnode .agentrepo/cli.mjs setup\nnode .agentrepo/cli.mjs dev\nnode .agentrepo/cli.mjs test\nnode .agentrepo/cli.mjs verify\n```\n\n执行后记录真实退出码、前置条件和未完成项。仅退出码为 0 的已执行检查可标为 `PASS`；其他结果保留 `FAIL` 或 `NOT_CONFIGURED`。\n\n## 最近一次验证证据\n\n对 `setup`、`dev`、`test`、`verify` 显式加 `--record` 才会记录进程退出码。未配置命令也会如实记录。`dev` 的进程退出不代表服务健康。普通执行不写文件。代码或测试变更后需重新验收，运行 `doctor` 可检测证据是否过期。\n\n<!-- agentrepo:verification:start -->\n未记录任何执行结果。状态：`NOT_VERIFIED`。\n<!-- agentrepo:verification:end -->\n\n## 检测警告\n\n{{COMMAND_WARNINGS}}\n\n## 本地服务与环境变量\n\n待维护者确认：必需服务、启动顺序、端口来源、测试数据、环境变量含义。`.env.example` 只填写非敏感变量名，不放真实凭据。\n",
   ".env.example": "# Add required environment variable names only after confirming the project configuration.\n# Never store credentials or production values here.\n",
   ".gitignore": "# AgentRepo defaults for new repositories only\n.env\n.env.*\n!.env.example\nnode_modules/\n.agentrepo/cache/\n",
   "github/ISSUE_TEMPLATE/config.yml": "blank_issues_enabled: false\n{{CONTACT_LINKS}}\n",
@@ -381,7 +403,7 @@ else {
     catch (e) {
         issues.push('invalid agentrepo.json: ' + e.message);
     }
-} return { ok:issues.length===0, scope:'command-configuration', readiness:'NOT_VERIFIED', issues }; }
+} return { ok:issues.length===0, scope:'command-configuration', readiness:verificationReadiness(root), issues }; }
 function map(root, write = false, check = false) { const f = path.join(root, 'docs/architecture.md'); if (!isRealFile(f))
     return { ok: false, problem: 'docs/architecture.md is missing' }; const old = text(f), start = '<!-- agentrepo:map:start -->', end = '<!-- agentrepo:map:end -->'; const a = old.indexOf(start), b = old.indexOf(end); if (a < 0 || b < 0 || b < a)
     return { ok: true, status: 'SKIP', problem: 'Architecture document is project-owned; no managed map markers' }; const expected = archBlock(root), actual = old.slice(a, b + end.length); if (check)
@@ -389,14 +411,78 @@ function map(root, write = false, check = false) { const f = path.join(root, 'do
     fs.writeFileSync(f, old.slice(0, a) + expected + old.slice(b + end.length));
     return { ok: true, status: 'UPDATED' };
 } return { ok: true, status: actual === expected ? 'PASS' : 'STALE', map: directoryMap(root) }; }
+
+function verificationFingerprint(root) {
+    const h=crypto.createHash('sha256'); let complete=true, count=0;
+    const relevant=f=>readableSourceFile(f)||/^(?:package(?:-lock)?\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|Cargo\.toml|Cargo\.lock|go\.mod|go\.sum|pyproject\.toml|requirements\.txt|Makefile|agentrepo\.json)$/.test(f);
+    const files=walk(root,5001);
+    if(files.length>=5001)complete=false; // The file-tree scan is bounded.
+    for(const rel of files){
+        if(!relevant(rel))continue;
+        if(++count>2000){complete=false;break;}
+        const file=path.join(root,rel);
+        try{
+            const st=fs.lstatSync(file);
+            if(!st.isFile()||st.size>1024*1024){complete=false;continue;}
+            h.update(rel+'\0');h.update(fs.readFileSync(file));h.update('\0');
+        }catch{complete=false;}
+    }
+    return {hash:h.digest('hex').slice(0,20),complete,count};
+}
+function recordCommandEvidence(root, result){
+    const p=path.join(root,'docs/development.md');
+    if(!isRealFile(p))return 'SKIP_NO_DEVELOPMENT_DOC';
+    const body=text(p),a='<!-- agentrepo:verification:start -->',b='<!-- agentrepo:verification:end -->';
+    const i=body.indexOf(a),j=body.indexOf(b);
+    if(i<0||j<i)return 'SKIP_PROJECT_OWNED_DOC';
+    protect(root,'docs/development.md');
+    const fingerprint=verificationFingerprint(root), old=body.slice(i,j);
+    const oldHash=old.match(/项目代码指纹：`([a-f0-9]{20})`/);
+    const evidence=new Map();
+    if(oldHash?.[1]===fingerprint.hash){
+        for(const line of old.split(/\r?\n/)){
+            const m=line.match(/^\| (setup|dev|test|verify) \| (PASS|FAIL|NOT_CONFIGURED|PARTIAL|EXITED_0_UNPROVEN) \| ([0-9,none]+) \|$/);
+            if(m)evidence.set(m[1],{status:m[2],codes:m[3]});
+        }
+    }
+    const status=result.status==='PASS' && fingerprint.complete?(result.command==='dev'?'EXITED_0_UNPROVEN':'PASS'):
+        result.status==='PASS'?'PARTIAL':result.status;
+    const codes=result.checks.length?result.checks.map(c=>c.exitCode??'none').join(','):'none';
+    evidence.set(result.command,{status,codes});
+    const rows=['setup','dev','test','verify'].map(cmd=>{
+        const item=evidence.get(cmd)||{status:'NOT_RUN',codes:'none'};
+        return `| ${cmd} | ${item.status} | ${item.codes} |`;
+    });
+    const at=new Date().toISOString();
+    const block=[a,`项目代码指纹：\`${fingerprint.hash}\`  \n记录时间：\`${at}\`  \n最近命令：\`${result.command}\`，结果：**${status}**。`,
+        '每项状态仅表示该命令的进程执行结果。开发服务退出码为 0 也不能证明服务曾经健康；需另行确认就绪探针。',
+        '', '| Command | Process status | Exit codes |','| --- | --- | --- |',...rows,b].join('\n');
+    fs.writeFileSync(p,body.slice(0,i)+block+body.slice(j+b.length));
+    return fingerprint.complete?'RECORDED':'RECORDED_PARTIAL';
+}
+function verificationReadiness(root){
+    const f=path.join(root,'docs/development.md');
+    if(!isRealFile(f))return 'NOT_VERIFIED';
+    const b=text(f),m=b.match(/<!-- agentrepo:verification:start -->([\s\S]*?)<!-- agentrepo:verification:end -->/);
+    if(!m)return 'NOT_VERIFIED';
+    const verify=m[1].match(/^\| verify \| (PASS|FAIL|NOT_CONFIGURED|PARTIAL) \|/m);
+    if(!verify)return 'NOT_VERIFIED';
+    const hash=m[1].match(/项目代码指纹：`([a-f0-9]{20})`/);
+    if(!hash)return 'NOT_VERIFIED';
+    const current=verificationFingerprint(root);
+    if(!current.complete||hash[1]!==current.hash)return 'STALE';
+    return verify[1]==='PASS'?'RECORDED_PASS':verify[1]==='FAIL'?'RECORDED_FAIL':'NOT_VERIFIED';
+}
 function parseConfig(root) { const p = path.join(root, 'agentrepo.json'); if (!isRealFile(p))
     return { schemaVersion: 1, commands: detect(root).commands, source: 'detected' }; const c = json(p); if (!c.commands || typeof c.commands !== 'object')
     throw Error('Invalid agentrepo.json commands'); return c; }
-function execute(root, which, { jsonOutput = false } = {}) {
+function execute(root, which, { jsonOutput = false, record = false } = {}) {
     const cfg = parseConfig(root);
     const steps = cfg.commands[which];
     if (!Array.isArray(steps) || steps.length === 0) {
-        return { ok: false, status: 'NOT_CONFIGURED', command: which, checks: [] };
+        const result={ok:false,status:'NOT_CONFIGURED',command:which,checks:[]};
+        if(record)result.record=recordCommandEvidence(root,result);
+        return result;
     }
     const out = [];
     for (const argv of steps) {
@@ -408,7 +494,9 @@ function execute(root, which, { jsonOutput = false } = {}) {
         if (!ok)
             break;
     }
-    return { ok: out.length === steps.length && out.every(x => x.status === 'PASS'), status: out.every(x => x.status === 'PASS') ? 'PASS' : 'FAIL', command: which, checks: out };
+    const result={ok:out.length===steps.length&&out.every(x=>x.status==='PASS'),status:out.every(x=>x.status==='PASS')?'PASS':'FAIL',command:which,checks:out};
+    if(record)result.record=recordCommandEvidence(root,result);
+    return result;
 }
 function locate(root, terms, limit=5) {
     const tokens=String(terms).toLowerCase().match(/[\p{L}\p{N}_]+/gu)||[];
@@ -449,7 +537,7 @@ else if (typeof o === 'string')
     process.stdout.write(o + '\n');
 else
     process.stdout.write(JSON.stringify(o, null, 2) + '\n'); }
-const HELP = `AgentRepo Kit ${VERSION}\n\nUsage: agentrepo <inspect|init|adopt|github|doctor|map|locate|setup|dev|test|verify> [path]\n\n  inspect [path]      Read-only detection of project commands and existing rules\n  init [path]         Add only missing essentials; no install scripts run\n  init [path] --dry-run  Preview additions\n  adopt [path]        Same as read-only inspect for an existing project\n  adopt [path] --apply   Add missing files, preserving all existing files\n  github [path]       Preview optional GitHub Issue, PR and changelog templates\n  github [path] --apply  Add missing GitHub templates only\n  github [path] --apply --integrations  Include a broken skill/integration form\n  github [path] --apply --workflow  Add CI only when compatible and explicitly requested\n  doctor [path]       Check the verification command is configured\n  map [path] --check  Detect stale auto-generated map\n  map [path] --write  Refresh only the managed map section\n  locate <keywords>   Find candidate file paths\n  setup|dev|test|verify  Run configured argv; detect native commands before init\n\n  --json              JSON output for most commands\n`;
+const HELP = `AgentRepo Kit ${VERSION}\n\nUsage: agentrepo <inspect|init|adopt|github|doctor|map|locate|setup|dev|test|verify> [path]\n\n  inspect [path]      Read-only detection of project commands and existing rules\n  init [path]         Add only missing essentials; no install scripts run\n  init [path] --dry-run  Preview additions\n  adopt [path]        Same as read-only inspect for an existing project\n  adopt [path] --apply   Add missing files, preserving all existing files\n  github [path]       Preview optional GitHub Issue, PR and changelog templates\n  github [path] --apply  Add missing GitHub templates only\n  github [path] --apply --integrations  Include a broken skill/integration form\n  github [path] --apply --workflow  Add CI only when compatible and explicitly requested\n  doctor [path]       Check the verification command is configured\n  map [path] --check  Detect stale auto-generated map\n  map [path] --write  Refresh only the managed map section\n  locate <keywords>   Find candidate file paths\n  setup|dev|test|verify  Run configured argv; detect native commands before init\n  setup|dev|test|verify --record  Record process exit status; dev health is not inferred\n\n  --json              JSON output for most commands\n`;
 function defaultWorkingDirectory() {
     return path.basename(path.dirname(SELF)) === ".agentrepo" ? path.dirname(path.dirname(SELF)) : process.cwd();
 }
@@ -494,7 +582,7 @@ export function main(argv = process.argv.slice(2), cwd = defaultWorkingDirectory
             case 'dev':
             case 'test':
             case 'verify':
-                result = execute(where, cmd, { jsonOutput: asJson });
+                result = execute(where, cmd, { jsonOutput: asJson, record: args.includes('--record') });
                 break;
             default: throw Error(`Unknown command: ${cmd}. Run agentrepo --help`);
         }

@@ -146,7 +146,7 @@ function tableCell(value) {
     return String(value).replace(/\|/g,'\\|').replace(/[\r\n]+/g,' ').replace(/`/g,'\\`');
 }
 function staticCodeFacts(root, allFiles=walk(root)) {
-    const all=new Set(allFiles), entries=[], refs=[], tests=[];
+    const all=new Set(allFiles), entries=[], refs=[], tests=[], exports=[];
     const pkgFile=path.join(root,'package.json');
     if(isRealFile(pkgFile)) {
         try {
@@ -154,6 +154,12 @@ function staticCodeFacts(root, allFiles=walk(root)) {
             const candidates=[];
             for(const key of ['main','module']) if(typeof pkg[key]==='string') candidates.push([key,pkg[key]]);
             if(typeof pkg.bin==='string') candidates.push(['bin',pkg.bin]);
+            const visitExports=(value,key,depth=0)=>{
+                if(depth>5)return;
+                if(typeof value==='string'){candidates.push([key,value]);return;}
+                if(value && typeof value==='object')for(const [k,v] of Object.entries(value))visitExports(v,`${key}.${k}`,depth+1);
+            };
+            if(pkg.exports)visitExports(pkg.exports,'exports');
             else if(pkg.bin && typeof pkg.bin==='object') for(const [name,value] of Object.entries(pkg.bin))
                 if(typeof value==='string') candidates.push([`bin.${name}`,value]);
             for(const [key,value] of candidates) {
@@ -170,6 +176,13 @@ function staticCodeFacts(root, allFiles=walk(root)) {
         const body=readSource(root,file);
         if(body===null) continue;
         for(const [i,line] of body.split(/\r?\n/).entries()) {
+            const declaration=line.match(/^\s*export\s+(?:default\s+)?(?:async\s+)?(?:function\s*\*?|class\s+|const\s+|let\s+|var\s+|interface\s+|type\s+|enum\s+)([A-Za-z_$][\w$]*)/);
+            if(declaration)exports.push({file,name:declaration[1],line:i+1,kind:'export declaration'});
+            const reexport=line.match(/^\s*export\s*\{([^}]+)\}/);
+            if(reexport)for(const token of reexport[1].split(',')){
+                const name=token.trim().split(/\s+as\s+/i).at(-1);
+                if(/^[A-Za-z_$][\w$]*$/.test(name))exports.push({file,name,line:i+1,kind:'named export'});
+            }
             const patterns=[/\b(?:import|export)\s+(?:[^'";]*?\s+from\s*)?['"](\.[^'"\s]+)['"]/g, /\b(?:require|import)\s*\(\s*['"](\.[^'"\s]+)['"]\s*\)/g];
             for(const regex of patterns) {
                 let m;
@@ -187,7 +200,9 @@ function staticCodeFacts(root, allFiles=walk(root)) {
     }
     const uniq=arr=>[...new Map(arr.map(a=>[`${a.from}|${a.to}|${a.line}`,a])).values()];
     const uniqueRefs=uniq(refs), uniqueTests=uniq(tests);
-    return {entries:entries.slice(0,30),refs:uniqueRefs.slice(0,30),tests:uniqueTests.slice(0,20),truncated:truncated||entries.length>30||uniqueRefs.length>30||uniqueTests.length>20};
+    return {entries:entries.slice(0,30),refs:uniqueRefs.slice(0,30),tests:uniqueTests.slice(0,20),
+        exports:exports.slice(0,50),
+        truncated:truncated||entries.length>30||uniqueRefs.length>30||uniqueTests.length>20||exports.length>50};
 }
 function sourceDigest(root, files=walk(root), facts=staticCodeFacts(root,files)) {
     return crypto.createHash('sha256').update(JSON.stringify({m:directoryMap(root),files:files.filter(readableSourceFile),facts})).digest('hex').slice(0,16);
@@ -199,7 +214,14 @@ function archBlock(root) {
         ...(d.length?d.map(x=>`| \`${tableCell(x.path)}\` | ${x.files} | 当前文件树 |`):['| 暂无已识别源码目录 | 0 | 当前文件树 |']),
         '', '### 已配置的代码入口','', '| File | Evidence |','| --- | --- |',
         ...(facts.entries.length?facts.entries.map(x=>`| \`${tableCell(x.path)}\` | \`${tableCell(x.evidence)}\` |`):['| 未识别到可确认的入口 | 待维护者核对 |']),
-        '', '### 静态导入证据','', '只记录源码中可解析、且目标文件存在的相对 import/require。不是完整调用图。','',
+        '', '### 代码导出与测试位置','',
+        '导出符号仅代表可在源码中定位的声明，不代表已确认的公共 API 或业务职责。关联测试仅限可解析的直接相对 import。','',
+        '| Export | Source | Direct test reference |', '| --- | --- | --- |',
+        ...(facts.exports.length?facts.exports.map(x=>{
+            const related=facts.tests.filter(t=>t.to===x.file).slice(0,3);
+            return `| \`${tableCell(x.name)}\` | \`${tableCell(x.file)}:${x.line}\` | ${related.length?related.map(t=>`\`${tableCell(t.from)}:${t.line}\``).join('、'):'未发现直接测试引用'} |`;
+        }):['| 未识别到导出声明 | 待源码审查 | 未知 |']),
+        '', '### 静态导入证据','', '只扫描部分 JavaScript/TypeScript 静态相对 import/require，并确认目标文件存在。动态调用、跨语言依赖和间接调用未覆盖；不是完整调用图。','',
         '| Importer | Target | Source line |','| --- | --- | --- |',
         ...(facts.refs.length?facts.refs.map(x=>`| \`${tableCell(x.from)}\` | \`${tableCell(x.to)}\` | \`${tableCell(x.from)}:${x.line}\` |`):['| 未识别到关系 | 待代码审查或使用语言分析器 | 不适用 |']),
         '', '### 测试引用证据','', '| Test | Referenced source | Source line |','| --- | --- | --- |',
@@ -366,7 +388,7 @@ else {
     catch (e) {
         issues.push('invalid agentrepo.json: ' + e.message);
     }
-} return { ok:issues.length===0, scope:'command-configuration', readiness:'NOT_VERIFIED', issues }; }
+} return { ok:issues.length===0, scope:'command-configuration', readiness:verificationReadiness(root), issues }; }
 function map(root, write = false, check = false) { const f = path.join(root, 'docs/architecture.md'); if (!isRealFile(f))
     return { ok: false, problem: 'docs/architecture.md is missing' }; const old = text(f), start = '<!-- agentrepo:map:start -->', end = '<!-- agentrepo:map:end -->'; const a = old.indexOf(start), b = old.indexOf(end); if (a < 0 || b < 0 || b < a)
     return { ok: true, status: 'SKIP', problem: 'Architecture document is project-owned; no managed map markers' }; const expected = archBlock(root), actual = old.slice(a, b + end.length); if (check)
@@ -374,14 +396,78 @@ function map(root, write = false, check = false) { const f = path.join(root, 'do
     fs.writeFileSync(f, old.slice(0, a) + expected + old.slice(b + end.length));
     return { ok: true, status: 'UPDATED' };
 } return { ok: true, status: actual === expected ? 'PASS' : 'STALE', map: directoryMap(root) }; }
+
+function verificationFingerprint(root) {
+    const h=crypto.createHash('sha256'); let complete=true, count=0;
+    const relevant=f=>readableSourceFile(f)||/^(?:package(?:-lock)?\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|Cargo\.toml|Cargo\.lock|go\.mod|go\.sum|pyproject\.toml|requirements\.txt|Makefile|agentrepo\.json)$/.test(f);
+    const files=walk(root,5001);
+    if(files.length>=5001)complete=false; // The file-tree scan is bounded.
+    for(const rel of files){
+        if(!relevant(rel))continue;
+        if(++count>2000){complete=false;break;}
+        const file=path.join(root,rel);
+        try{
+            const st=fs.lstatSync(file);
+            if(!st.isFile()||st.size>1024*1024){complete=false;continue;}
+            h.update(rel+'\0');h.update(fs.readFileSync(file));h.update('\0');
+        }catch{complete=false;}
+    }
+    return {hash:h.digest('hex').slice(0,20),complete,count};
+}
+function recordCommandEvidence(root, result){
+    const p=path.join(root,'docs/development.md');
+    if(!isRealFile(p))return 'SKIP_NO_DEVELOPMENT_DOC';
+    const body=text(p),a='<!-- agentrepo:verification:start -->',b='<!-- agentrepo:verification:end -->';
+    const i=body.indexOf(a),j=body.indexOf(b);
+    if(i<0||j<i)return 'SKIP_PROJECT_OWNED_DOC';
+    protect(root,'docs/development.md');
+    const fingerprint=verificationFingerprint(root), old=body.slice(i,j);
+    const oldHash=old.match(/项目代码指纹：`([a-f0-9]{20})`/);
+    const evidence=new Map();
+    if(oldHash?.[1]===fingerprint.hash){
+        for(const line of old.split(/\r?\n/)){
+            const m=line.match(/^\| (setup|dev|test|verify) \| (PASS|FAIL|NOT_CONFIGURED|PARTIAL|EXITED_0_UNPROVEN) \| ([0-9,none]+) \|$/);
+            if(m)evidence.set(m[1],{status:m[2],codes:m[3]});
+        }
+    }
+    const status=result.status==='PASS' && fingerprint.complete?(result.command==='dev'?'EXITED_0_UNPROVEN':'PASS'):
+        result.status==='PASS'?'PARTIAL':result.status;
+    const codes=result.checks.length?result.checks.map(c=>c.exitCode??'none').join(','):'none';
+    evidence.set(result.command,{status,codes});
+    const rows=['setup','dev','test','verify'].map(cmd=>{
+        const item=evidence.get(cmd)||{status:'NOT_RUN',codes:'none'};
+        return `| ${cmd} | ${item.status} | ${item.codes} |`;
+    });
+    const at=new Date().toISOString();
+    const block=[a,`项目代码指纹：\`${fingerprint.hash}\`  \n记录时间：\`${at}\`  \n最近命令：\`${result.command}\`，结果：**${status}**。`,
+        '每项状态仅表示该命令的进程执行结果。开发服务退出码为 0 也不能证明服务曾经健康；需另行确认就绪探针。',
+        '', '| Command | Process status | Exit codes |','| --- | --- | --- |',...rows,b].join('\n');
+    fs.writeFileSync(p,body.slice(0,i)+block+body.slice(j+b.length));
+    return fingerprint.complete?'RECORDED':'RECORDED_PARTIAL';
+}
+function verificationReadiness(root){
+    const f=path.join(root,'docs/development.md');
+    if(!isRealFile(f))return 'NOT_VERIFIED';
+    const b=text(f),m=b.match(/<!-- agentrepo:verification:start -->([\s\S]*?)<!-- agentrepo:verification:end -->/);
+    if(!m)return 'NOT_VERIFIED';
+    const verify=m[1].match(/^\| verify \| (PASS|FAIL|NOT_CONFIGURED|PARTIAL) \|/m);
+    if(!verify)return 'NOT_VERIFIED';
+    const hash=m[1].match(/项目代码指纹：`([a-f0-9]{20})`/);
+    if(!hash)return 'NOT_VERIFIED';
+    const current=verificationFingerprint(root);
+    if(!current.complete||hash[1]!==current.hash)return 'STALE';
+    return verify[1]==='PASS'?'RECORDED_PASS':verify[1]==='FAIL'?'RECORDED_FAIL':'NOT_VERIFIED';
+}
 function parseConfig(root) { const p = path.join(root, 'agentrepo.json'); if (!isRealFile(p))
     return { schemaVersion: 1, commands: detect(root).commands, source: 'detected' }; const c = json(p); if (!c.commands || typeof c.commands !== 'object')
     throw Error('Invalid agentrepo.json commands'); return c; }
-function execute(root, which, { jsonOutput = false } = {}) {
+function execute(root, which, { jsonOutput = false, record = false } = {}) {
     const cfg = parseConfig(root);
     const steps = cfg.commands[which];
     if (!Array.isArray(steps) || steps.length === 0) {
-        return { ok: false, status: 'NOT_CONFIGURED', command: which, checks: [] };
+        const result={ok:false,status:'NOT_CONFIGURED',command:which,checks:[]};
+        if(record)result.record=recordCommandEvidence(root,result);
+        return result;
     }
     const out = [];
     for (const argv of steps) {
@@ -393,7 +479,9 @@ function execute(root, which, { jsonOutput = false } = {}) {
         if (!ok)
             break;
     }
-    return { ok: out.length === steps.length && out.every(x => x.status === 'PASS'), status: out.every(x => x.status === 'PASS') ? 'PASS' : 'FAIL', command: which, checks: out };
+    const result={ok:out.length===steps.length&&out.every(x=>x.status==='PASS'),status:out.every(x=>x.status==='PASS')?'PASS':'FAIL',command:which,checks:out};
+    if(record)result.record=recordCommandEvidence(root,result);
+    return result;
 }
 function locate(root, terms, limit=5) {
     const tokens=String(terms).toLowerCase().match(/[\p{L}\p{N}_]+/gu)||[];
@@ -434,7 +522,7 @@ else if (typeof o === 'string')
     process.stdout.write(o + '\n');
 else
     process.stdout.write(JSON.stringify(o, null, 2) + '\n'); }
-const HELP = `AgentRepo Kit ${VERSION}\n\nUsage: agentrepo <inspect|init|adopt|github|doctor|map|locate|setup|dev|test|verify> [path]\n\n  inspect [path]      Read-only detection of project commands and existing rules\n  init [path]         Add only missing essentials; no install scripts run\n  init [path] --dry-run  Preview additions\n  adopt [path]        Same as read-only inspect for an existing project\n  adopt [path] --apply   Add missing files, preserving all existing files\n  github [path]       Preview optional GitHub Issue, PR and changelog templates\n  github [path] --apply  Add missing GitHub templates only\n  github [path] --apply --integrations  Include a broken skill/integration form\n  github [path] --apply --workflow  Add CI only when compatible and explicitly requested\n  doctor [path]       Check the verification command is configured\n  map [path] --check  Detect stale auto-generated map\n  map [path] --write  Refresh only the managed map section\n  locate <keywords>   Find candidate file paths\n  setup|dev|test|verify  Run configured argv; detect native commands before init\n\n  --json              JSON output for most commands\n`;
+const HELP = `AgentRepo Kit ${VERSION}\n\nUsage: agentrepo <inspect|init|adopt|github|doctor|map|locate|setup|dev|test|verify> [path]\n\n  inspect [path]      Read-only detection of project commands and existing rules\n  init [path]         Add only missing essentials; no install scripts run\n  init [path] --dry-run  Preview additions\n  adopt [path]        Same as read-only inspect for an existing project\n  adopt [path] --apply   Add missing files, preserving all existing files\n  github [path]       Preview optional GitHub Issue, PR and changelog templates\n  github [path] --apply  Add missing GitHub templates only\n  github [path] --apply --integrations  Include a broken skill/integration form\n  github [path] --apply --workflow  Add CI only when compatible and explicitly requested\n  doctor [path]       Check the verification command is configured\n  map [path] --check  Detect stale auto-generated map\n  map [path] --write  Refresh only the managed map section\n  locate <keywords>   Find candidate file paths\n  setup|dev|test|verify  Run configured argv; detect native commands before init\n  setup|dev|test|verify --record  Record process exit status; dev health is not inferred\n\n  --json              JSON output for most commands\n`;
 function defaultWorkingDirectory() {
     return path.basename(path.dirname(SELF)) === ".agentrepo" ? path.dirname(path.dirname(SELF)) : process.cwd();
 }
@@ -479,7 +567,7 @@ export function main(argv = process.argv.slice(2), cwd = defaultWorkingDirectory
             case 'dev':
             case 'test':
             case 'verify':
-                result = execute(where, cmd, { jsonOutput: asJson });
+                result = execute(where, cmd, { jsonOutput: asJson, record: args.includes('--record') });
                 break;
             default: throw Error(`Unknown command: ${cmd}. Run agentrepo --help`);
         }
