@@ -103,8 +103,8 @@ test('existing project with no test runner does not claim ready',t=>{
 
 test('template AGENTS and development docs use existing project commands and policy priority',t=>{
  const r=tmp(t);init(r);const agents=read(r,'AGENTS.md');const dev=read(r,'docs/development.md');
- assert.match(agents,/遵守本仓库已有的项目规范/);
- assert.match(agents,/使用仓库已有的开发命令/);assert.match(dev,/NOT_CONFIGURED/);
+ assert.match(agents,/遵守仓库已有规则/);
+ assert.match(agents,/沿用项目现有结构与命令/);assert.match(dev,/NOT_CONFIGURED/);
  assert.doesNotMatch(agents,/System Prompt|Zero-shot|Attention|\.agentrepo\/cli\.mjs/);
 });
 
@@ -127,10 +127,9 @@ test('project AGENTS contains project-only entry and no generic workflow duplica
  const agents=read(r,'AGENTS.md');
  assert.ok(agents.split('\n').length<=150);
  assert.match(agents,/^# /);
- assert.match(agents,/^## 优先级/m);
- assert.ok(agents.indexOf('## 优先级')<agents.indexOf('## 执行步骤'));
- assert.match(agents,/工作目录：仓库根目录/);
- assert.match(agents,/使用仓库已有的开发命令/);
+ assert.match(agents,/^## 工作方式/m);
+ assert.ok(agents.indexOf('遵守仓库已有规则')<agents.indexOf('## 工作方式'));
+ assert.match(agents,/沿用项目现有结构与命令/);
  assert.doesNotMatch(agents,/For bugs and behavior changes|lora-mode|通用 Skill|\.agentrepo\/cli\.mjs/);
  assert.doesNotMatch(agents,/pnpm|npm test|node --test/);
 });

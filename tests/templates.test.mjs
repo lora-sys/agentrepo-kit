@@ -18,8 +18,8 @@ test('template source and distributable CLI are byte-identical after build',()=>
 test('generated project AGENTS is self-sufficient without global modes or skills',t=>{
  const root=work(t);init(root);const agents=read(root,'AGENTS.md');
  assert.ok(agents.split('\n').length<=150);
- assert.ok(agents.indexOf('## 优先级')<agents.indexOf('## 执行步骤'));
- for(const word of ['## 项目上下文','## 执行步骤','## 安全边界','## 项目专属约束','仓库已有的开发命令']) assert.ok(agents.includes(word),word);
+ assert.ok(agents.indexOf('遵守仓库已有规则')<agents.indexOf('## 工作方式'));
+ for(const word of ['## 工作方式','## 安全边界','## 项目专属规则','沿用项目现有结构与命令']) assert.ok(agents.includes(word),word);
  assert.doesNotMatch(agents,/lora-mode|全局 Skill|System Prompt|\.agentrepo\/cli\.mjs/);
  assert.ok(fs.existsSync(path.join(root,'.agentrepo/cli.mjs')));
  assert.equal(fs.existsSync(path.join(root,'.agents/skills')),false);
@@ -54,7 +54,7 @@ test('bundled CLI can initialize another project without template files',t=>{
  const c=path.join(a,'.agentrepo/cli.mjs');
  const run=spawnSync(process.execPath,[c,'init',b,'--json'],{cwd:outer,encoding:'utf8'});
  assert.equal(run.status,0,run.stderr);
- assert.ok(read(b,'AGENTS.md').includes('## 执行步骤'));
+ assert.ok(read(b,'AGENTS.md').includes('## 工作方式'));
  assert.ok(read(b,'docs/development.md').includes('NOT_CONFIGURED'));
 });
 
