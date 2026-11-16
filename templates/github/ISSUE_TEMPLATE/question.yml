@@ -1,5 +1,6 @@
 name: Question
 description: Ask how to use or configure the project
+labels: [question]
 body:
   - type: textarea
     id: question
