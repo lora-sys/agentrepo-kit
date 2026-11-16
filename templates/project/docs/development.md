@@ -1,22 +1,34 @@
 # Development
 
-## 检测到的技术栈
+## 技术栈证据
 
 {{STACK_LIST}}
 
-## 命令与验收
+## 检测到的命令
 
-工作目录为仓库根目录；唯一命令配置来源是 `agentrepo.json.commands`。
+工作目录为仓库根目录。唯一可执行配置来源为 `agentrepo.json.commands`。
 
-| 场景 | 命令 | 通过条件 |
+| 场景 | 原始 argv | 检测状态 |
 | --- | --- | --- |
-| 安装 | `node .agentrepo/cli.mjs setup` | 已配置的命令退出码为 0 |
-| 开发 | `node .agentrepo/cli.mjs dev` | 项目按自身启动检查确认可用 |
-| 测试 | `node .agentrepo/cli.mjs test` | 已配置的命令退出码为 0 |
-| 验收 | `node .agentrepo/cli.mjs verify` | 所有配置的检查退出码为 0 |
+{{COMMAND_ROWS}}
 
-缺失命令返回 `NOT_CONFIGURED` 且退出码非 0。禁止猜测包管理器命令、端口、数据库或服务地址。
+`DETECTED_UNVERIFIED` 只表示仓库配置包含命令，不代表命令运行成功。`NOT_CONFIGURED` 表示未发现可执行命令。
 
-## 本地环境
+## 实际执行
 
-维护者在本节填写必需服务、非敏感环境变量的含义，以及可复现的启动前置条件。变量名放在 `.env.example`，不要填写真实凭据。
+```sh
+node .agentrepo/cli.mjs setup
+node .agentrepo/cli.mjs dev
+node .agentrepo/cli.mjs test
+node .agentrepo/cli.mjs verify
+```
+
+执行后记录真实退出码、前置条件和未完成项。仅退出码为 0 的已执行检查可标为 `PASS`；其他结果保留 `FAIL` 或 `NOT_CONFIGURED`。
+
+## 检测警告
+
+{{COMMAND_WARNINGS}}
+
+## 本地服务与环境变量
+
+待维护者确认：必需服务、启动顺序、端口来源、测试数据、环境变量含义。`.env.example` 只填写非敏感变量名，不放真实凭据。

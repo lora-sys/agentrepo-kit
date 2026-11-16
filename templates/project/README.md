@@ -1,13 +1,15 @@
 # {{PROJECT_NAME}}
 
-## 项目
+## 项目事实
 
-待维护者填写：项目用途、目标用户及主要入口。
+- 用途：待维护者确认。
+- 目标用户：待维护者确认。
+- 业务入口：见 `docs/architecture.md` 的源码证据，并由维护者确认业务含义。
 
-## 本地开发
+## 开发入口
 
-- 环境与命令：[`docs/development.md`](docs/development.md)
-- 模块与边界：[`docs/architecture.md`](docs/architecture.md)
-- Agent 工作约定：[`AGENTS.md`](AGENTS.md)
+- [Agent 规则](AGENTS.md)
+- [代码地图与架构契约](docs/architecture.md)
+- [实际命令和环境](docs/development.md)
 
-在仓库根目录运行 `node .agentrepo/cli.mjs inspect` 检查命令检测结果；使用 `node .agentrepo/cli.mjs verify` 运行已配置的检查。
+在仓库根目录运行 `node .agentrepo/cli.mjs inspect` 查看检测依据。运行 `node .agentrepo/cli.mjs verify` 执行已配置的项目检查。

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Changed
+
+- Search source content and return file/line evidence; generate architecture entrypoint, import and test reference evidence without invented calls.
+- Distinguish configured commands from executed checks in generated development docs and read-only inspection.
+- Separate core repository Setup Skill from optional GitHub governance; install integration-specific Issue Forms only when applicable.
+
 ## 1.0.0-rc.2
 
 ### Changed

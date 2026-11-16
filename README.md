@@ -15,7 +15,7 @@ node bin/agentrepo.mjs init /path/to/project --dry-run
 node bin/agentrepo.mjs init /path/to/project
 ```
 
-`inspect` 只读检查项目已有规则、语言和命令。`verify` 在初始化前就可以执行已发现的项目原生检查。`init` 只增加缺失文件，不执行安装脚本、不覆盖已有文档和 CI。
+`inspect` 只读检查项目已有规则、语言和命令，并将未执行命令标为 `DETECTED_UNVERIFIED`。`verify` 在初始化前就可以执行已发现的项目原生检查。`init` 只增加缺失文件，不执行安装脚本、不覆盖已有文档和 CI。
 
 进入目标项目后，可直接使用随项目复制的 CLI：
 
@@ -51,6 +51,8 @@ node bin/agentrepo.mjs adopt /path/to/existing-project --apply
 | `.env.example` | 非敏感配置变量示例 |
 | `README.md`、`.gitignore` | 仅在不存在时生成 |
 
+使用 `node .agentrepo/cli.mjs locate "duplicate email"` 搜索文件名与源码内容，并返回命中行号。代码地图还会记录可追溯的相对 import、package.json 入口及测试引用证据，但不把静态引用当成完整调用图。
+
 要更新源码目录地图：
 
 ```sh
@@ -60,20 +62,18 @@ node .agentrepo/cli.mjs map --check
 
 项目级 Eval、交互式 HTML 和额外 GitHub 模板不在默认安装范围。已有 `dependency-cruiser`、Lint 和测试可以纳入项目自己的 `verify` 命令；脚手架不会凭空生成架构依赖关系。
 
-## GitHub 协作模板
+## 可选的 GitHub 协作模板
 
-不需要 npm。直接按 [`AgentRepo setup Skill`](skills/agentrepo-setup/SKILL.md) 审查并复制 [`templates/github/`](templates/github/) 的 YAML Issue Forms、PR 模板和 Changelog。项目已有模板优先。
-
-如果需要重复为多个仓库安装，可使用独立 CLI：
+GitHub Issue Forms、PR 和 Changelog 不属于代码库接入的必需步骤。需要时按 [`agentrepo-github` Skill](skills/agentrepo-github/SKILL.md) 使用 [`templates/github/`](templates/github/)；普通项目不生成 Skill/Connector 故障表单。
 
 ```sh
 node bin/agentrepo.mjs github /path/to/project
 node bin/agentrepo.mjs github /path/to/project --apply
-# 仅当项目已有可运行的 setup/verify 且同意修改 CI
-node bin/agentrepo.mjs github /path/to/project --apply --workflow
+# 有 Skill 或连接器的项目可额外选择该表单
+node bin/agentrepo.mjs github /path/to/project --apply --integrations
 ```
 
-普通 `init` 不生成 GitHub 模板，`github` 不带 `--apply` 时只读。已有同类 Issue、PR、历史记录或 Workflow 不被覆盖。`config.yml` 只有检测到 GitHub origin 才写入真实 contact links；需在 GitHub 提前建立所用标签。
+完整的 GitHub 协作接入步骤在 [`agentrepo-github` Skill](skills/agentrepo-github/SKILL.md)。CI Workflow 仍需单独授权 `--workflow`。已有 GitHub 协作规范保持不变。
 
 ## 独立使用与模板
 

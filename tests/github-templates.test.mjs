@@ -14,12 +14,13 @@ const forms=['bug_report.yml','feature_request.yml','question.yml','broken_skill
 
 test('GitHub: scan is read-only; explicit apply adds YAML issue forms, PR and changelog',t=>{
  const r=tmp(t);const scan=githubInit(r,false);
- assert.equal(scan.created.length,7);assert.equal(fs.readdirSync(r).length,0);
+ assert.equal(scan.created.length,6);assert.equal(fs.readdirSync(r).length,0);
  assert.equal(scan.warnings.some(w=>w.includes('contact links')),true);
  const result=githubInit(r,true);
- assert.equal(result.created.length,7);assert.equal(result.applied,true);
+ assert.equal(result.created.length,6);assert.equal(result.applied,true);
  assert.equal(get(r,'.github/ISSUE_TEMPLATE/config.yml').trim(),'blank_issues_enabled: false');
- for(const n of forms)assert.match(get(r,'.github/ISSUE_TEMPLATE/'+n),/^name: .+\ndescription:/);
+ for(const n of forms.filter(x=>x!=='broken_skill_or_integration.yml'))assert.match(get(r,'.github/ISSUE_TEMPLATE/'+n),/^name: .+\ndescription:/);
+ assert.equal(fs.existsSync(path.join(r,'.github/ISSUE_TEMPLATE/broken_skill_or_integration.yml')),false);
  assert.match(get(r,'.github/pull_request_template.md'),/## Verification/);
  assert.match(get(r,'CHANGELOG.md'),/Unreleased/);
  assert.equal(fs.existsSync(path.join(r,'.github/workflows/agentrepo-ci.yml')),false);
@@ -73,13 +74,13 @@ test('GitHub: bundled CLI can add templates to a second project with no source t
  const nested=path.join(a,'.agentrepo/cli.mjs');
  const out=spawnSync(process.execPath,[nested,'github',b,'--apply','--json'],{encoding:'utf8'});
  assert.equal(out.status,0,`${out.stderr}\n${out.stdout}`);
- assert.equal(JSON.parse(out.stdout).created.length,7);
+ assert.equal(JSON.parse(out.stdout).created.length,6);
  assert.ok(fs.existsSync(path.join(b,'.github/ISSUE_TEMPLATE/bug_report.yml')));
 });
 
 test('GitHub: templates are first-class sources and the setup Skill has no external agent dependency',()=>{
  const skill=get(root,'skills/agentrepo-setup/SKILL.md');
- assert.match(skill,/name: agentrepo-setup/);assert.match(skill,/Does not require npm/);
+ assert.match(skill,/name: agentrepo-setup/);assert.match(skill,/Independent of npm/);
  assert.doesNotMatch(skill,/lora-mode/);
  const formsDir=path.join(root,'templates/github/ISSUE_TEMPLATE');
  for(const name of forms){const body=fs.readFileSync(path.join(formsDir,name),'utf8');assert.match(body,/\nbody:\n/);assert.match(body,/validations:/);}
@@ -94,4 +95,22 @@ test('GitHub: templates are first-class sources and the setup Skill has no exter
 test('GitHub: question form automatically requests the question label',t=>{
  const r=tmp(t);githubInit(r,true);
  assert.match(get(r,'.github/ISSUE_TEMPLATE/question.yml'),/^labels: \[question\]$/m);
+});
+
+
+test('GitHub: integration incident form is conditional on repository type',t=>{
+ const r=tmp(t);put(r,'skills/my-skill/SKILL.md','# My skill\n');
+ const plan=githubPlan(r);assert.ok(plan.created.includes('.github/ISSUE_TEMPLATE/broken_skill_or_integration.yml'));
+ githubInit(r,true);assert.ok(fs.existsSync(path.join(r,'.github/ISSUE_TEMPLATE/broken_skill_or_integration.yml')));
+ const other=tmp(t);assert.ok(githubPlan(other,false,true).created.includes('.github/ISSUE_TEMPLATE/broken_skill_or_integration.yml'));
+});
+
+test('GitHub: setup and Github Skills are separate independent procedures',()=>{
+ const main=get(root,'skills/agentrepo-setup/SKILL.md');
+ const optional=get(root,'skills/agentrepo-github/SKILL.md');
+ assert.match(main,/actual code entrypoints/);
+ assert.match(main,/one real, small repository task/);
+ assert.doesNotMatch(main,/Check \`.github\/ISSUE_TEMPLATE/);
+ assert.match(optional,/name: agentrepo-github/);
+ assert.match(optional,/broken_skill_or_integration/);
 });

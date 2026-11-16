@@ -1,30 +1,30 @@
 ---
 name: agentrepo-setup
-description: Make a new or existing repository agent-friendly using short project instructions, runnable commands, checks and optional GitHub collaboration templates. Does not require npm or AgentRepo Kit.
+description: Make a new or existing repository legible, executable and verifiable using real source evidence and runnable project checks. Independent of npm, AgentRepo CLI and other skills.
 ---
 
 # AgentRepo setup
 
-Work on the target repository. Do not assume global modes, other skills or the AgentRepo CLI are installed.
+Work in the target repository. Preserve existing project rules. This Skill can be used without the AgentRepo CLI or any global agent framework.
 
-## Read-only inspection
+## Inspect first
 
-1. Read existing `AGENTS.md`, `README.md`, `CONTRIBUTING.md`, `SECURITY.md` and the native build/test configuration that actually exists.
-2. Check `.github/ISSUE_TEMPLATE/`, PR templates in the root, `docs/` and `.github/`, existing workflows, and `CHANGELOG.md`, `HISTORY.md`, `NEWS.md`, `CHANGES.md`.
-3. Identify real setup, development, test and verification commands. Execute existing verification only after reviewing whether it has side effects. Do not guess unavailable commands.
-4. Present a short change plan grouped as `create`, `preserve` and `needs review`. Get approval before writing to an existing repository.
+1. Read the existing `AGENTS.md`, `README.md`, package/build configuration and relevant tests. Follow original project constraints.
+2. Locate actual code entrypoints and related tests using source search. For each finding record a file path and line number. Confirm behavior in code before labeling an entrypoint.
+3. Trace observable imports and callers. Distinguish static import evidence from runtime calls and inferred architecture; leave unverified responsibilities explicitly unconfirmed.
+4. Read setup, dev, test and verify commands from the native project configuration. Classify each as `NOT_CONFIGURED`, `DETECTED_UNVERIFIED`, `PASS`, or `FAIL`. Review side effects before executing setup or dev commands.
+5. For an existing repository, show which files need creation, which must be preserved, and which facts require maintainer review. Get approval before writing.
 
-## Apply only after approval
+## Apply after approval
 
-1. Add missing project-level `AGENTS.md`, `docs/architecture.md` and `docs/development.md`. Keep instructions short and specific to this repository. Do not copy generic rules into every document.
-2. If GitHub templates are requested, use files under `templates/github/` as editable examples. Preserve existing Issue Forms as a group, any existing PR template, and any changelog alias. Do not introduce a second set.
-3. Replace GitHub contact links with the repository's verified URL; if there is no verified GitHub remote, omit links. Never generate fake repository URLs.
-4. Never install or activate a GitHub Actions workflow by default. Require separate approval and confirm that its commands work for the target repository.
-5. Check every YAML issue form has a unique `name`, valid `body`, and the intended required fields. GitHub labels must exist in the destination repository to be applied automatically.
-6. Run the project's real checks. Report exact command, status and error. Use `NOT_CONFIGURED` for missing commands, never `PASS`.
+- Keep the existing `AGENTS.md` unchanged. If missing, write one short agent entry with context paths, task scope and actual verification commands.
+- Populate `docs/architecture.md` with source-backed entrypoints, module paths, test references and evidence. Do not invent contracts, import edges or project goals.
+- Populate `docs/development.md` with runnable commands, their configuration source, executed exit codes and prerequisites. Use `NOT_CONFIGURED` for missing commands.
+- Reuse existing build scripts, lint and CI. Do not add a duplicate command system or an unapproved workflow.
+- Run the smallest relevant real verification command. If no command exists, report the gap rather than claiming the project is ready.
 
-## Completion
+## Acceptance
 
-Summarize files added, preserved, explicit approvals, tests executed and open questions. Do not claim the codebase is fully understood merely because templates were created.
+Try one real, small repository task: find code, confirm impact scope, update a test or behavior and run the relevant check. Report the touched files, exact commands, exit status and remaining unknowns. Template creation alone is not acceptance.
 
-Optional CLI from an AgentRepo Kit checkout: `node bin/agentrepo.mjs inspect <repo>` and `node bin/agentrepo.mjs github <repo> --apply`. npm installation is not required.
+GitHub community templates are an optional separate workflow. Use `skills/agentrepo-github/SKILL.md` only when requested.
