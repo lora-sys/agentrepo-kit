@@ -25,6 +25,14 @@ node .agentrepo/cli.mjs verify
 
 执行后记录真实退出码、前置条件和未完成项。仅退出码为 0 的已执行检查可标为 `PASS`；其他结果保留 `FAIL` 或 `NOT_CONFIGURED`。
 
+## 最近一次验证证据
+
+对 `setup`、`dev`、`test`、`verify` 显式加 `--record` 才会记录进程退出码。未配置命令也会如实记录。`dev` 的进程退出不代表服务健康。普通执行不写文件。代码或测试变更后需重新验收，运行 `doctor` 可检测证据是否过期。
+
+<!-- agentrepo:verification:start -->
+未记录任何执行结果。状态：`NOT_VERIFIED`。
+<!-- agentrepo:verification:end -->
+
 ## 检测警告
 
 {{COMMAND_WARNINGS}}

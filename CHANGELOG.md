@@ -1,3 +1,8 @@
+## Unreleased
+
+- Add evidence-backed exported-symbol and test-reference index to generated architecture docs.
+- Add optional command `--record` with code-fingerprint-based freshness status.
+
 # Changelog
 
 ## Unreleased

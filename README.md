@@ -24,11 +24,12 @@ cd /path/to/project
 node .agentrepo/cli.mjs setup
 node .agentrepo/cli.mjs dev
 node .agentrepo/cli.mjs test
-node .agentrepo/cli.mjs verify
+node .agentrepo/cli.mjs verify --record
+node .agentrepo/cli.mjs doctor
 node .agentrepo/cli.mjs map --check
 ```
 
-没有配置的命令会返回 `NOT_CONFIGURED`；`verify` 缺失时按失败处理。命令的唯一配置来源是 `agentrepo.json.commands`。检测结果可以手动修改，使用 argv 数组，不需要 Shell 包装。
+`setup/test/verify --record` 将实际退出码写入可管理的开发文档区块；`doctor` 检查其是否仍适用于当前源码。没有配置的命令会返回 `NOT_CONFIGURED`；`verify` 缺失时按失败处理。命令的唯一配置来源是 `agentrepo.json.commands`。检测结果可以手动修改，使用 argv 数组，不需要 Shell 包装。
 
 ## 接手已有项目
 
@@ -51,7 +52,7 @@ node bin/agentrepo.mjs adopt /path/to/existing-project --apply
 | `.env.example` | 非敏感配置变量示例 |
 | `README.md`、`.gitignore` | 仅在不存在时生成 |
 
-使用 `node .agentrepo/cli.mjs locate "duplicate email"` 搜索文件名与源码内容，并返回命中行号。代码地图还会记录可追溯的相对 import、package.json 入口及测试引用证据，但不把静态引用当成完整调用图。
+使用 `node .agentrepo/cli.mjs locate "duplicate email"` 搜索文件名与源码内容，并返回命中行号。代码地图还会记录可追溯的导出符号、相对 import、package.json 入口及测试引用证据，但不把静态引用当成完整调用图。也不会根据导出符号自动编造业务职责。
 
 要更新源码目录地图：
 

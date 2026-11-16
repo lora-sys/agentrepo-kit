@@ -21,7 +21,7 @@ Work in the target repository. Preserve existing project rules. This Skill can b
 - Populate `docs/architecture.md` with source-backed entrypoints, module paths, test references and evidence. Do not invent contracts, import edges or project goals.
 - Populate `docs/development.md` with runnable commands, their configuration source, executed exit codes and prerequisites. Use `NOT_CONFIGURED` for missing commands.
 - Reuse existing build scripts, lint and CI. Do not add a duplicate command system or an unapproved workflow.
-- Run the smallest relevant real verification command. If no command exists, report the gap rather than claiming the project is ready.
+- Run the smallest relevant real verification command. When the generated development document is present, explicitly run `node .agentrepo/cli.mjs verify --record` to record an actual result. If no command exists, report the gap rather than claiming the project is ready.
 
 ## Acceptance
 
