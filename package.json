@@ -1,6 +1,6 @@
 {
   "name": "agentrepo-kit",
-  "version": "1.0.0-rc.1",
+  "version": "1.0.0-rc.2",
   "description": "Make a repository legible, executable, and verifiable for coding agents",
   "type": "module",
   "bin": {
@@ -11,15 +11,19 @@
   },
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check bin/agentrepo.mjs && npm test"
+    "check": "node scripts/build-cli.mjs --check && node --check bin/agentrepo.mjs && npm test",
+    "build:cli": "node scripts/build-cli.mjs"
   },
   "license": "MIT",
   "files": [
     "bin",
+    "src",
+    "scripts",
     "docs",
     "templates",
     "README.md",
     "README.en.md",
-    "LICENSE"
+    "LICENSE",
+    "skills"
   ]
 }

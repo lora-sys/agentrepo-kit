@@ -1,0 +1,9 @@
+name: Question
+description: Ask how to use or configure the project
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+    validations:
+      required: true

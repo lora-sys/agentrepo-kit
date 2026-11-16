@@ -1,1 +1,8 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
+contact_links:
+  - name: Good first issue or help wanted
+    url: https://github.com/lora-sys/agentrepo-kit/issues?q=is%3Aissue%20is%3Aopen%20label%3A%22good%20first%20issue%22%2Clabel%3A%22help%20wanted%22
+    about: Browse issues for first-time contributors
+  - name: Report a security vulnerability
+    url: https://github.com/lora-sys/agentrepo-kit/security/policy
+    about: Do not disclose vulnerabilities in a public issue

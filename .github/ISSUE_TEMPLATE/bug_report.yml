@@ -1,35 +1,49 @@
 name: Bug report
-description: Report a reproducible failure in AgentRepo Kit
+description: Report a reproducible Agent or repository setup failure
+labels: [bug, needs-triage]
 body:
   - type: textarea
     id: actual
     attributes:
-      label: 实际行为
-      description: 请提供实际错误，并删除个人数据和凭据。
+      label: What happened?
+      description: Paste the exact error text, not a screenshot of text. Remove secrets and personal data.
     validations:
       required: true
-  - type: textarea
-    id: expected
+  - type: dropdown
+    id: installation
     attributes:
-      label: 预期行为
-    validations:
-      required: true
-  - type: textarea
-    id: reproduce
-    attributes:
-      label: 最小复现步骤
-      description: 提供初始化命令、仓库结构及可重复的步骤。
+      label: How did you set it up?
+      options:
+        - Skill instructions only
+        - Downloaded or cloned CLI
+        - npm or npx
+        - Other
     validations:
       required: true
   - type: input
-    id: environment
+    id: version
     attributes:
-      label: 操作系统及版本
-      placeholder: Ubuntu 24.04, Node 22, AgentRepo Kit 0.7.0
+      label: Version or commit SHA
+      placeholder: "agentrepo version, commit SHA, or skill revision"
     validations:
       required: true
   - type: textarea
-    id: checks
+    id: reproduction
     attributes:
-      label: 测试与日志
-      description: 可以贴最小 Eval 样例，但不能包含密钥。
+      label: Reproduction steps
+      description: Start with an empty or minimal repository when possible.
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+  - type: textarea
+    id: context
+    attributes:
+      label: Environment and agent context
+      description: OS, runtime version, agent/model and permissions, if relevant.
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: CLI diagnostics and logs
+      description: Output of `node .agentrepo/cli.mjs doctor` or failing command. Redact credentials and private paths.
+      render: shell

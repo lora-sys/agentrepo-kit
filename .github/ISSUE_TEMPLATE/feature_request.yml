@@ -1,24 +1,34 @@
 name: Feature request
-description: Suggest a testable improvement
+description: Describe a missing behavior and acceptance criteria
+labels: [enhancement, needs-triage]
 body:
+  - type: checkboxes
+    id: duplicates
+    attributes:
+      label: Existing issues
+      options:
+        - label: I searched open and closed issues for this request.
+          required: true
   - type: textarea
     id: problem
     attributes:
-      label: 要解决的具体问题
+      label: Problem to solve
+      description: Describe the user-visible problem, not the implementation.
     validations:
       required: true
   - type: textarea
-    id: outcome
+    id: expected
     attributes:
-      label: 预期行为与验收条件
-      description: 描述可以独立核验的结果。
+      label: Expected behavior and acceptance criteria
     validations:
       required: true
   - type: textarea
-    id: impact
+    id: alternatives
     attributes:
-      label: 对已有仓库兼容性的影响
+      label: Alternatives considered
+      description: Existing scripts, skills, plugins, connectors, MCP tools or manual steps.
   - type: textarea
-    id: eval
+    id: compatibility
     attributes:
-      label: Eval 复现与验收方法
+      label: Existing repository compatibility
+      description: Explain which files or established workflows could change.

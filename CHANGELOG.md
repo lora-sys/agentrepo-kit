@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 1.0.0-rc.2
+
+### Changed
+
+- Project AGENTS is self-contained; no external Agent framework or global Skill is required.
+- All generated scaffold text has editable source templates under `templates/project/`.
+- The standalone CLI embeds the project templates at build time; original project files remain untouched.
+
 ### Changed
 
 - Default CLI rebuilt around legible, executable and verifiable repositories.

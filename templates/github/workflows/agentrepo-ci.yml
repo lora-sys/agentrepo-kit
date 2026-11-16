@@ -1,0 +1,18 @@
+name: AgentRepo verification
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Set up project
+        run: node .agentrepo/cli.mjs setup
+      - name: Verify project
+        run: node .agentrepo/cli.mjs verify

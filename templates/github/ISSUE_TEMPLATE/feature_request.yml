@@ -1,0 +1,34 @@
+name: Feature request
+description: Describe a missing behavior and acceptance criteria
+labels: [enhancement, needs-triage]
+body:
+  - type: checkboxes
+    id: duplicates
+    attributes:
+      label: Existing issues
+      options:
+        - label: I searched open and closed issues for this request.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Describe the user-visible problem, not the implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior and acceptance criteria
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing scripts, skills, plugins, connectors, MCP tools or manual steps.
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Existing repository compatibility
+      description: Explain which files or established workflows could change.
