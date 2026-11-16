@@ -1,5 +1,7 @@
 # Contributing
 
-Report a reproducible problem with repository type, command, actual result and expected result. For a fix, add a regression in `tests/lean.test.mjs`, run `npm test`, and describe any project compatibility change in the PR.
+Use the GitHub Issue Forms for bug reports, feature requests and questions. Fix-only PRs for broken skills or integrations do not need an issue first. Propose a new feature in an issue before implementation.
 
-Keep the default flow limited to inspect, init, setup/dev/test/verify and map. Optional features require a demonstrated need and must not add default generated files.
+Maintainers review `needs-triage` issues weekly, replace that label with a relevant `area:*` label if the taxonomy exists, and add `good first issue` or `help wanted` when appropriate. Configure missing labels on GitHub before relying on automatic labeling.
+
+Keep changes focused. Run `npm test`, `npm run check` and record commands and exit codes in the PR. For fixes, add a small regression test. Do not change existing project files or CI templates without explicit approval.

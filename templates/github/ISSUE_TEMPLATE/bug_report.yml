@@ -1,0 +1,49 @@
+name: Bug report
+description: Report a reproducible Agent or repository setup failure
+labels: [bug, needs-triage]
+body:
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened?
+      description: Paste the exact error text, not a screenshot of text. Remove secrets and personal data.
+    validations:
+      required: true
+  - type: dropdown
+    id: installation
+    attributes:
+      label: How did you set it up?
+      options:
+        - Skill instructions only
+        - Downloaded or cloned CLI
+        - npm or npx
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit SHA
+      placeholder: "agentrepo version, commit SHA, or skill revision"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Start with an empty or minimal repository when possible.
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+  - type: textarea
+    id: context
+    attributes:
+      label: Environment and agent context
+      description: OS, runtime version, agent/model and permissions, if relevant.
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: CLI diagnostics and logs
+      description: Output of `node .agentrepo/cli.mjs doctor` or failing command. Redact credentials and private paths.
+      render: shell

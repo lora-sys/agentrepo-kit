@@ -60,13 +60,31 @@ node .agentrepo/cli.mjs map --check
 
 项目级 Eval、交互式 HTML 和额外 GitHub 模板不在默认安装范围。已有 `dependency-cruiser`、Lint 和测试可以纳入项目自己的 `verify` 命令；脚手架不会凭空生成架构依赖关系。
 
-## 项目 AGENTS.md 的维护边界
+## GitHub 协作模板
 
-自动生成的 `AGENTS.md` 只保留仓库级优先级与验证入口。项目维护者只补充无法从代码或配置推导、违反代价高的项目事实。复杂 Agent 流程放在项目 Skill 中，公共流程交给已安装的全局 Skill。使用 `lora-mode` 的项目可参考 [`templates/AGENTS.project.lora-mode.md`](templates/AGENTS.project.lora-mode.md)，此模板不会自动生成到目标仓库。
+不需要 npm。直接按 [`AgentRepo setup Skill`](skills/agentrepo-setup/SKILL.md) 审查并复制 [`templates/github/`](templates/github/) 的 YAML Issue Forms、PR 模板和 Changelog。项目已有模板优先。
+
+如果需要重复为多个仓库安装，可使用独立 CLI：
+
+```sh
+node bin/agentrepo.mjs github /path/to/project
+node bin/agentrepo.mjs github /path/to/project --apply
+# 仅当项目已有可运行的 setup/verify 且同意修改 CI
+node bin/agentrepo.mjs github /path/to/project --apply --workflow
+```
+
+普通 `init` 不生成 GitHub 模板，`github` 不带 `--apply` 时只读。已有同类 Issue、PR、历史记录或 Workflow 不被覆盖。`config.yml` 只有检测到 GitHub origin 才写入真实 contact links；需在 GitHub 提前建立所用标签。
+
+## 独立使用与模板
+
+无需任何额外 Agent 框架或插件。默认 `AGENTS.md` 已包含上下文入口、执行步骤、安全边界及验收要求。维护者可按 [`templates/AGENTS.project.md`](templates/AGENTS.project.md) 补充项目专属规则。
+
+生成内容的 Markdown 源模板在 `templates/project/`。CLI 构建会将模板嵌入单文件分发包；目标仓库仍只生成基础文件，且所有原有文件保持不变。
 
 ## 开发与测试
 
 ```sh
+npm run build:cli
 npm test
 npm run check
 npm pack --dry-run

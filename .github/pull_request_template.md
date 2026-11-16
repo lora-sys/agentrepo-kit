@@ -1,19 +1,20 @@
 ## Change
 
-What changes, why, and related Issue if any?
-
-## Compatibility
-
-Affected APIs, migrations and project rules.
-
-- [ ] Existing project instructions and CI policies were preserved.
+- Related issue and expected behavior:
+- Files or interfaces affected:
 
 ## Verification
 
-- [ ] Actual test commands and PASS, FAIL or SKIP; UI screenshots when relevant.
-- [ ] Regression coverage for behavior changes, or reason not applicable.
-- [ ] Docs, architecture and Changelog reviewed.
+- [ ] I ran the relevant checks and recorded their commands and exit codes below.
+- [ ] Bug fix has a regression test, or I explained why a test is not appropriate.
+- [ ] Existing AGENTS.md, CI and project-owned files were preserved unless explicitly approved.
+- [ ] User-facing docs and CHANGELOG.md were updated when relevant.
 
-## Risks
+| Command | PASS / FAIL / NOT_CONFIGURED | Evidence |
+| --- | --- | --- |
+| | | |
 
-Unrun checks and known limitations.
+## Compatibility and risks
+
+- Changed public contracts, environment requirements, or migrations:
+- Skipped checks and follow-up work:

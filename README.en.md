@@ -48,3 +48,11 @@ npm run check
 See [Architecture](docs/ARCHITECTURE.zh-CN.md), [Contributing](CONTRIBUTING.md), and [MIT License](LICENSE).
 
 The previous governance and evaluation implementation is preserved in the `archive/pre-lean-v1` branch.
+
+## Standalone project templates
+
+No global skills or external agent modes are required. The generated `AGENTS.md` contains the complete task workflow and verification rules. Edit `templates/project/` for scaffold source text and run `npm run build:cli` to regenerate the self-contained CLI. Project-specific rules can be added using `templates/AGENTS.project.md`.
+
+## Optional GitHub collaboration templates
+
+No npm installation is required. Follow [the standalone setup Skill](skills/agentrepo-setup/SKILL.md) and edit [GitHub Issue Forms and PR templates](templates/github/). Or run `node bin/agentrepo.mjs github /path/to/repo` to preview and add `--apply` to install only missing templates. CI requires separate `--workflow` approval and existing executable setup/verify commands.

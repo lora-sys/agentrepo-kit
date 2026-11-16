@@ -1,0 +1,40 @@
+name: Broken skill or integration
+description: Report a skill, connector or tool integration that stopped working
+labels: [bug, needs-triage]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Component type
+      options:
+        - Repository skill
+        - External connector or MCP
+        - Bundled CLI integration
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: name
+    attributes:
+      label: Component name
+    validations:
+      required: true
+  - type: textarea
+    id: error
+    attributes:
+      label: Exact error output
+      description: Paste text and remove credentials. Fix-only pull requests for broken integrations do not require an issue first.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit SHA
+    validations:
+      required: true
+  - type: textarea
+    id: upstream
+    attributes:
+      label: Known upstream changes
+      description: Renamed command, changed parameter, removed endpoint or permission changes.

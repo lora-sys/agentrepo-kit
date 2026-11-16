@@ -9,7 +9,7 @@
 | 代码地图 | 当前文件树 | `agentrepo map --check/--write` |
 | 原规则 | 已存在的文件 | `agentrepo adopt` 只读；`--apply` 补缺失项 |
 
-`bin/agentrepo.mjs` 是唯一运行时入口。初始化时将该文件复制到目标仓库的 `.agentrepo/cli.mjs`，无需再次安装本工具。
+`templates/project/` 是生成文档的权威模板；`src/agentrepo.mjs` 是 CLI 逻辑源。执行 `npm run build:cli` 将模板嵌入 `bin/agentrepo.mjs`。该分发文件复制到目标仓库的 `.agentrepo/cli.mjs` 后仍可离线初始化其他项目。
 
 ## 边界
 
