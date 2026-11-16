@@ -80,7 +80,8 @@ test('GitHub: bundled CLI can add templates to a second project with no source t
 
 test('GitHub: templates are first-class sources and the setup Skill has no external agent dependency',()=>{
  const skill=get(root,'skills/agentrepo-setup/SKILL.md');
- assert.match(skill,/name: agentrepo-setup/);assert.match(skill,/Independent of npm/);
+ assert.match(skill,/name: agentrepo-setup/);assert.match(skill,/Take over a new or existing code repository/);
+ assert.match(skill,/The AgentRepo CLI is optional/);assert.match(skill,/Do not scaffold every template by default/);
  assert.doesNotMatch(skill,/lora-mode/);
  const formsDir=path.join(root,'templates/github/ISSUE_TEMPLATE');
  for(const name of forms){const body=fs.readFileSync(path.join(formsDir,name),'utf8');assert.match(body,/\nbody:\n/);assert.match(body,/validations:/);}
@@ -108,8 +109,9 @@ test('GitHub: integration incident form is conditional on repository type',t=>{
 test('GitHub: setup and Github Skills are separate independent procedures',()=>{
  const main=get(root,'skills/agentrepo-setup/SKILL.md');
  const optional=get(root,'skills/agentrepo-github/SKILL.md');
- assert.match(main,/actual code entrypoints/);
- assert.match(main,/one real, small repository task/);
+ assert.match(main,/actual entry points and commands/);
+ assert.match(main,/smallest task-relevant change/);
+ assert.match(main,/architecture and development documents are optional/);
  assert.doesNotMatch(main,/Check \`.github\/ISSUE_TEMPLATE/);
  assert.match(optional,/name: agentrepo-github/);
  assert.match(optional,/broken_skill_or_integration/);

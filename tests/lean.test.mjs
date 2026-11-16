@@ -93,7 +93,7 @@ test('native verification can run BEFORE initialization',t=>{
 });
 
 test('native verification fails before init when test script exits nonzero',t=>{
- const r=tmp(t);write(r,'package.json',JSON.stringify({name:'broken',version:'0.0.0',scripts:{test:'node -e "process.exit(9)"'}}));
+ const r=tmp(t);write(r,'package.json',JSON.stringify({name:'broken',scripts:{test:'node -e "process.exit(9)"'}}));
  assert.equal(execute(r,'verify',{jsonOutput:true}).status,'FAIL');
 });
 
@@ -101,11 +101,11 @@ test('existing project with no test runner does not claim ready',t=>{
  const r=tmp(t);write(r,'README.md','# service\n');init(r);assert.deepEqual(doctor(r).issues,['verify command NOT_CONFIGURED']);
 });
 
-test('template AGENTS and development docs contain runnable commands and existing policy priority',t=>{
+test('template AGENTS and development docs use existing project commands and policy priority',t=>{
  const r=tmp(t);init(r);const agents=read(r,'AGENTS.md');const dev=read(r,'docs/development.md');
- assert.match(agents,/先遵守本仓库已有的明确限制/);
- assert.match(agents,/node .agentrepo\/cli.mjs verify/);assert.match(dev,/NOT_CONFIGURED/);
- assert.doesNotMatch(agents,/System Prompt|Zero-shot|Attention/);
+ assert.match(agents,/遵守本仓库已有的项目规范/);
+ assert.match(agents,/使用仓库已有的开发命令/);assert.match(dev,/NOT_CONFIGURED/);
+ assert.doesNotMatch(agents,/System Prompt|Zero-shot|Attention|\.agentrepo\/cli\.mjs/);
 });
 
 test('bundled verify resolves its own project even if invoked from another cwd',t=>{
@@ -122,7 +122,6 @@ test('npm-style symlink invokes CLI rather than silently exiting',t=>{
  assert.equal(result.status,0,result.stderr);assert.match(result.stdout,/1\.0\.0-rc\.2/);
 });
 
-
 test('project AGENTS contains project-only entry and no generic workflow duplication',t=>{
  const r=tmp(t);write(r,'package.json',JSON.stringify({name:'demo',scripts:{test:'node --test'}}));init(r);
  const agents=read(r,'AGENTS.md');
@@ -131,9 +130,8 @@ test('project AGENTS contains project-only entry and no generic workflow duplica
  assert.match(agents,/^## 优先级/m);
  assert.ok(agents.indexOf('## 优先级')<agents.indexOf('## 执行步骤'));
  assert.match(agents,/工作目录：仓库根目录/);
- assert.match(agents,/node \.agentrepo\/cli\.mjs verify/);
- assert.match(agents,/NOT_CONFIGURED/);
- assert.doesNotMatch(agents,/For bugs and behavior changes|lora-mode|通用 Skill/);
+ assert.match(agents,/使用仓库已有的开发命令/);
+ assert.doesNotMatch(agents,/For bugs and behavior changes|lora-mode|通用 Skill|\.agentrepo\/cli\.mjs/);
  assert.doesNotMatch(agents,/pnpm|npm test|node --test/);
 });
 
