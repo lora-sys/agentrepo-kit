@@ -129,13 +129,90 @@ function detect(root) {
     return res;
 }
 function directoryMap(root) { const files = walk(root); const dirs = [...new Set(files.map(f => f.split('/')[0]).filter(n => SOURCES.has(n)))].sort(); return dirs.map(dir => ({ path: dir + '/', files: files.filter(f => f.startsWith(dir + '/')).length })); }
-function sourceDigest(root) { const m = directoryMap(root), f = walk(root).filter(s => s.match(/\.(?:[cm]?[jt]sx?|py|go|rs|sh)$/)); return crypto.createHash('sha256').update(JSON.stringify({ m, f })).digest('hex').slice(0, 16); }
-function archBlock(root) { const d = directoryMap(root); const lines = ['<!-- agentrepo:map:start -->', `Source map fingerprint: \`${sourceDigest(root)}\``, '', '| Path | Files | Responsibility |', '| --- | ---: | --- |', ...(d.length ? d.map(x => `| \`${x.path}\` | ${x.files} | 待项目维护者确认 |`) : ['| 未发现常见源码目录 | 0 | 新项目可在添加代码后更新 |']), '<!-- agentrepo:map:end -->']; return lines.join('\n'); }
+function readableSourceFile(name) {
+    return /\.(?:[cm]?[jt]sx?|py|go|rs|sh|java|rb|php|vue|svelte|sql)$/i.test(name) &&
+        !/(^|\/)\.env(?:\.|$)|\.(?:key|pem|p12|pfx)$/i.test(name);
+}
+function readSource(root, rel, maxBytes=256*1024) {
+    const p=path.join(root, rel);
+    try {
+        const st=fs.lstatSync(p);
+        if(!st.isFile() || st.size>maxBytes) return null;
+        const body=text(p);
+        return body.includes('\0') ? null : body;
+    } catch { return null; }
+}
+function tableCell(value) {
+    return String(value).replace(/\|/g,'\\|').replace(/[\r\n]+/g,' ').replace(/`/g,'\\`');
+}
+function staticCodeFacts(root, allFiles=walk(root)) {
+    const all=new Set(allFiles), entries=[], refs=[], tests=[];
+    const pkgFile=path.join(root,'package.json');
+    if(isRealFile(pkgFile)) {
+        try {
+            const pkg=json(pkgFile);
+            const candidates=[];
+            for(const key of ['main','module']) if(typeof pkg[key]==='string') candidates.push([key,pkg[key]]);
+            if(typeof pkg.bin==='string') candidates.push(['bin',pkg.bin]);
+            else if(pkg.bin && typeof pkg.bin==='object') for(const [name,value] of Object.entries(pkg.bin))
+                if(typeof value==='string') candidates.push([`bin.${name}`,value]);
+            for(const [key,value] of candidates) {
+                const rel=path.posix.normalize(value.replace(/^\.\//,''));
+                if(all.has(rel)) entries.push({path:rel,evidence:`package.json ${key}`});
+            }
+        } catch { /* The regular config detector reports malformed package metadata. */ }
+    }
+    let examined=0, truncated=false;
+    for(const file of allFiles) {
+        if(!/\.[cm]?[jt]sx?$/i.test(file)) continue;
+        if(examined>=1200) {truncated=true;break;}
+        examined++;
+        const body=readSource(root,file);
+        if(body===null) continue;
+        for(const [i,line] of body.split(/\r?\n/).entries()) {
+            const patterns=[/\b(?:import|export)\s+(?:[^'";]*?\s+from\s*)?['"](\.[^'"\s]+)['"]/g, /\b(?:require|import)\s*\(\s*['"](\.[^'"\s]+)['"]\s*\)/g];
+            for(const regex of patterns) {
+                let m;
+                while((m=regex.exec(line))) {
+                    const target=path.posix.normalize(path.posix.join(path.posix.dirname(file),m[1]));
+                    const suffixes=['','.js','.mjs','.cjs','.ts','.mts','.cts','.jsx','.tsx','.json','/index.js','/index.ts'];
+                    const resolved=suffixes.map(x=>target+x).find(x=>all.has(x));
+                    if(!resolved) continue;
+                    const record={from:file,to:resolved,line:i+1};
+                    if(/^(?:tests?|__tests__)\//.test(file)||/\.(?:spec|test)\.[cm]?[jt]sx?$/.test(file)) tests.push(record);
+                    else refs.push(record);
+                }
+            }
+        }
+    }
+    const uniq=arr=>[...new Map(arr.map(a=>[`${a.from}|${a.to}|${a.line}`,a])).values()];
+    const uniqueRefs=uniq(refs), uniqueTests=uniq(tests);
+    return {entries:entries.slice(0,30),refs:uniqueRefs.slice(0,30),tests:uniqueTests.slice(0,20),truncated:truncated||entries.length>30||uniqueRefs.length>30||uniqueTests.length>20};
+}
+function sourceDigest(root, files=walk(root), facts=staticCodeFacts(root,files)) {
+    return crypto.createHash('sha256').update(JSON.stringify({m:directoryMap(root),files:files.filter(readableSourceFile),facts})).digest('hex').slice(0,16);
+}
+function archBlock(root) {
+    const files=walk(root),d=directoryMap(root),facts=staticCodeFacts(root,files);
+    const lines=['<!-- agentrepo:map:start -->',`Source map fingerprint: \`${sourceDigest(root,files,facts)}\``,'',
+        '### 目录索引','', '| Path | Files | Evidence |','| --- | ---: | --- |',
+        ...(d.length?d.map(x=>`| \`${tableCell(x.path)}\` | ${x.files} | 当前文件树 |`):['| 暂无已识别源码目录 | 0 | 当前文件树 |']),
+        '', '### 已配置的代码入口','', '| File | Evidence |','| --- | --- |',
+        ...(facts.entries.length?facts.entries.map(x=>`| \`${tableCell(x.path)}\` | \`${tableCell(x.evidence)}\` |`):['| 未识别到可确认的入口 | 待维护者核对 |']),
+        '', '### 静态导入证据','', '只记录源码中可解析、且目标文件存在的相对 import/require。不是完整调用图。','',
+        '| Importer | Target | Source line |','| --- | --- | --- |',
+        ...(facts.refs.length?facts.refs.map(x=>`| \`${tableCell(x.from)}\` | \`${tableCell(x.to)}\` | \`${tableCell(x.from)}:${x.line}\` |`):['| 未识别到关系 | 待代码审查或使用语言分析器 | 不适用 |']),
+        '', '### 测试引用证据','', '| Test | Referenced source | Source line |','| --- | --- | --- |',
+        ...(facts.tests.length?facts.tests.map(x=>`| \`${tableCell(x.from)}\` | \`${tableCell(x.to)}\` | \`${tableCell(x.from)}:${x.line}\` |`):['| 未识别到引用 | 未证明没有测试 | 不适用 |']),
+        ...(facts.truncated?['','静态证据超过展示上限，部分结果已截断。']:[]),
+        '<!-- agentrepo:map:end -->'];
+    return lines.join('\n');
+}
 const PROJECT_TEMPLATES = Object.freeze({
   "AGENTS.md": "# {{PROJECT_NAME}}\n\n## 优先级\n\n先遵守本仓库已有的明确限制和任务授权。项目专属约束经维护者确认后写在本文件；通用执行步骤如下。不要用模板内容覆盖已有规则。\n\n## 项目上下文\n\n- 项目目标与使用者：`README.md`。\n- 模块入口与边界：`docs/architecture.md`。\n- 环境与命令：`docs/development.md`；可执行配置以 `agentrepo.json.commands` 为准。\n- 工作目录：仓库根目录。只读取任务相关的文件与测试。\n\n## 执行步骤\n\n1. 读取任务要求、相关代码和现有测试；通过 `node .agentrepo/cli.mjs locate \"关键词\"` 辅助定位。\n2. 确认影响的入口、调用方及公开接口；修改范围限制在任务相关文件。\n3. 对行为变化补充或修改能验证结果的测试；按仓库既有约定执行。\n4. 执行 `node .agentrepo/cli.mjs verify`；源码目录变化后执行 `node .agentrepo/cli.mjs map --check`。\n5. 报告修改的文件、实际运行的命令和退出状态。`PASS`、`FAIL`、`NOT_CONFIGURED` 不得混用。\n\n## 安全边界\n\n- 未获明确授权，不修改生产配置、发布流程、CI 或现有公共接口契约。\n- 不读取、打印或提交真实密钥和生产数据。\n- 不编造模块职责、依赖关系、命令结果及未执行的测试。\n- 验证失败或未配置时，明确报告并停止声称任务已验收。\n\n## 项目专属约束\n\n维护者确认高风险的业务不变量、禁止操作及替代动作后补充；没有确认前不要推断。\n",
-  "README.md": "# {{PROJECT_NAME}}\n\n## 项目\n\n待维护者填写：项目用途、目标用户及主要入口。\n\n## 本地开发\n\n- 环境与命令：[`docs/development.md`](docs/development.md)\n- 模块与边界：[`docs/architecture.md`](docs/architecture.md)\n- Agent 工作约定：[`AGENTS.md`](AGENTS.md)\n\n在仓库根目录运行 `node .agentrepo/cli.mjs inspect` 检查命令检测结果；使用 `node .agentrepo/cli.mjs verify` 运行已配置的检查。\n",
-  "docs/architecture.md": "# Architecture\n\n## 代码地图\n\n{{CODE_MAP}}\n\n## 业务入口与模块契约\n\n| 入口或模块 | 责任 | 公开契约 | 允许调用方 |\n| --- | --- | --- | --- |\n| 待确认 | 待确认 | 待确认 | 待确认 |\n\n仅填写从源码与维护者确认的事实；删除不适用的行。\n\n## 不可违反的边界\n\n待维护者确认跨层依赖和接口兼容约束。能静态检查的规则放入项目已有的 lint 或架构检查，并纳入 `verify`。\n\n源码文件变化后执行 `node .agentrepo/cli.mjs map --write`，然后执行 `node .agentrepo/cli.mjs map --check`。\n",
-  "docs/development.md": "# Development\n\n## 检测到的技术栈\n\n{{STACK_LIST}}\n\n## 命令与验收\n\n工作目录为仓库根目录；唯一命令配置来源是 `agentrepo.json.commands`。\n\n| 场景 | 命令 | 通过条件 |\n| --- | --- | --- |\n| 安装 | `node .agentrepo/cli.mjs setup` | 已配置的命令退出码为 0 |\n| 开发 | `node .agentrepo/cli.mjs dev` | 项目按自身启动检查确认可用 |\n| 测试 | `node .agentrepo/cli.mjs test` | 已配置的命令退出码为 0 |\n| 验收 | `node .agentrepo/cli.mjs verify` | 所有配置的检查退出码为 0 |\n\n缺失命令返回 `NOT_CONFIGURED` 且退出码非 0。禁止猜测包管理器命令、端口、数据库或服务地址。\n\n## 本地环境\n\n维护者在本节填写必需服务、非敏感环境变量的含义，以及可复现的启动前置条件。变量名放在 `.env.example`，不要填写真实凭据。\n",
+  "README.md": "# {{PROJECT_NAME}}\n\n## 项目事实\n\n- 用途：待维护者确认。\n- 目标用户：待维护者确认。\n- 业务入口：见 `docs/architecture.md` 的源码证据，并由维护者确认业务含义。\n\n## 开发入口\n\n- [Agent 规则](AGENTS.md)\n- [代码地图与架构契约](docs/architecture.md)\n- [实际命令和环境](docs/development.md)\n\n在仓库根目录运行 `node .agentrepo/cli.mjs inspect` 查看检测依据。运行 `node .agentrepo/cli.mjs verify` 执行已配置的项目检查。\n",
+  "docs/architecture.md": "# Architecture\n\n## 源码证据\n\n{{CODE_MAP}}\n\n## 业务入口与模块契约\n\n以下信息需结合业务行为和源码审查后填写。静态 import 证据不等于运行时调用关系。\n\n| 入口或模块 | 业务职责 | 公开契约 | 禁止依赖或修改范围 | 证据路径 |\n| --- | --- | --- | --- | --- |\n| 待确认 | 待确认 | 待确认 | 待确认 | 待确认 |\n\n## 验证\n\n- 新增、移动源文件或修改 import 后：`node .agentrepo/cli.mjs map --write`\n- 提交前：`node .agentrepo/cli.mjs map --check`\n- 确认的架构限制应加入现有 lint 或静态分析器，并纳入项目 `verify`。\n",
+  "docs/development.md": "# Development\n\n## 技术栈证据\n\n{{STACK_LIST}}\n\n## 检测到的命令\n\n工作目录为仓库根目录。唯一可执行配置来源为 `agentrepo.json.commands`。\n\n| 场景 | 原始 argv | 检测状态 |\n| --- | --- | --- |\n{{COMMAND_ROWS}}\n\n`DETECTED_UNVERIFIED` 只表示仓库配置包含命令，不代表命令运行成功。`NOT_CONFIGURED` 表示未发现可执行命令。\n\n## 实际执行\n\n```sh\nnode .agentrepo/cli.mjs setup\nnode .agentrepo/cli.mjs dev\nnode .agentrepo/cli.mjs test\nnode .agentrepo/cli.mjs verify\n```\n\n执行后记录真实退出码、前置条件和未完成项。仅退出码为 0 的已执行检查可标为 `PASS`；其他结果保留 `FAIL` 或 `NOT_CONFIGURED`。\n\n## 检测警告\n\n{{COMMAND_WARNINGS}}\n\n## 本地服务与环境变量\n\n待维护者确认：必需服务、启动顺序、端口来源、测试数据、环境变量含义。`.env.example` 只填写非敏感变量名，不放真实凭据。\n",
   ".env.example": "# Add required environment variable names only after confirming the project configuration.\n# Never store credentials or production values here.\n",
   ".gitignore": "# AgentRepo defaults for new repositories only\n.env\n.env.*\n!.env.example\nnode_modules/\n.agentrepo/cache/\n",
   "github/ISSUE_TEMPLATE/config.yml": "blank_issues_enabled: false\n{{CONTACT_LINKS}}\n",
@@ -161,7 +238,13 @@ function renderTemplate(name, fields={}) {
 }
 function manual(root) { return renderTemplate('docs/architecture.md', {CODE_MAP:archBlock(root)}); }
 function agents(root) { return renderTemplate('AGENTS.md', {PROJECT_NAME:path.basename(root)}); }
-function development(found) {return renderTemplate('docs/development.md', {STACK_LIST:found.stack.map(x => '- ' + x).join('\n')}); }
+function development(found) {
+    const rows=['setup','dev','test','verify'].map(name=>{
+        const commands=found.commands[name];
+        return `| ${name} | ${commands?.length ? commands.map(argv=>`\`${tableCell(JSON.stringify(argv))}\``).join('；') : '未配置'} | ${commands?.length ? 'DETECTED_UNVERIFIED' : 'NOT_CONFIGURED'} |`;
+    }).join('\n');
+    return renderTemplate('docs/development.md', {STACK_LIST:found.stack.map(x=>'- '+x).join('\n'),COMMAND_ROWS:rows,COMMAND_WARNINGS:found.warnings.length?found.warnings.map(x=>'- '+x).join('\n'):'无'});
+}
 function plan(root) {
     if (exists(root) && !isRealDir(root))
         throw new Error('Target path is not a directory');
@@ -221,14 +304,17 @@ function githubWorkflows(root) {
     const p=path.join(root,'.github/workflows');
     return isRealDir(p)?fs.readdirSync(p).filter(f=>/\.ya?ml$/i.test(f)).sort():[];
 }
-function githubPlan(root, workflow=false) {
+function hasIntegrationSurface(root) {
+    return ['skills','.agents/skills','connectors','plugins','.mcp.json','mcp.json'].some(f=>isRealDir(path.join(root,f))||isRealFile(path.join(root,f)));
+}
+function githubPlan(root, workflow=false, integrations=false) {
     if (exists(root) && !isRealDir(root)) throw Error('Target path is not a directory');
     const issues=githubIssueTemplates(root), prs=githubPrTemplates(root), changelogs=githubChangelogs(root), workflows=githubWorkflows(root);
     const origin=githubOrigin(root),warnings=[], skipped=[];
     const files={};
     if (issues.length) skipped.push('Existing Issue forms preserved as a group');
     else {
-        for (const name of ['bug_report.yml','feature_request.yml','question.yml','broken_skill_or_integration.yml']) {
+        for (const name of ['bug_report.yml','feature_request.yml','question.yml',...(integrations||hasIntegrationSurface(root)?['broken_skill_or_integration.yml']:[])]) {
             files['.github/ISSUE_TEMPLATE/'+name]=renderTemplate('github/ISSUE_TEMPLATE/'+name);
         }
         const links=origin?`contact_links:\n  - name: Good first issue or help wanted\n    url: ${origin}/issues?q=is%3Aissue%20is%3Aopen%20label%3A%22good%20first%20issue%22%2Clabel%3A%22help%20wanted%22\n    about: Browse issues for first-time contributors\n  - name: Report a security vulnerability\n    url: ${origin}/security/policy\n    about: Do not disclose vulnerabilities in a public issue\n`:'';
@@ -256,8 +342,8 @@ function githubPlan(root, workflow=false) {
     }
     return {ok:true,root,files,created,preserved,skipped,origin,warnings,existing:{issueForms:issues,prTemplates:prs,changelogs,workflows}};
 }
-function githubInit(root,apply=false,workflow=false) {
-    const p=githubPlan(root,workflow);
+function githubInit(root,apply=false,workflow=false,integrations=false) {
+    const p=githubPlan(root,workflow,integrations);
     if (apply) {
         fs.mkdirSync(root,{recursive:true});
         for (const rel of p.created) {
@@ -277,7 +363,13 @@ function init(root, dry = false) { const p = plan(root); if (!dry) {
         fs.writeFileSync(target, p.files[rel], { flag: 'wx', mode: rel.endsWith('cli.mjs') ? 0o755 : 0o644 });
     }
 } return { ok: true, dryRun: dry, created: p.created, preserved: p.preserved, stack: p.found.stack, commands: p.found.commands, reviewRequired: p.preserved.includes('AGENTS.md') ? 'Existing AGENTS.md preserved; review whether it needs an entry for the CLI.' : null }; }
-function inspect(root) { const a = plan(root); return { root, stack: a.found.stack, packageManager: a.found.packageManager, evidence: a.found.evidence, warnings: a.found.warnings, commands: a.found.commands, proposedFiles: a.created, preservedFiles: a.preserved, policyFiles: ['AGENTS.md', 'CLAUDE.md', '.github/copilot-instructions.md', '.cursor/rules'].filter(f => exists(path.join(root, f))) }; }
+function inspect(root) { const a = plan(root); return {
+    root, stack:a.found.stack, packageManager:a.found.packageManager, evidence:a.found.evidence,
+    warnings:a.found.warnings, commands:a.found.commands,
+    commandStatus:Object.fromEntries(Object.entries(a.found.commands).map(([name,argv])=>[name,argv?.length?'DETECTED_UNVERIFIED':'NOT_CONFIGURED'])),
+    proposedFiles:a.created, preservedFiles:a.preserved,
+    policyFiles:['AGENTS.md','CLAUDE.md','.github/copilot-instructions.md','.cursor/rules'].filter(f=>exists(path.join(root,f)))
+}; }
 function doctor(root) { const issues = []; const cfg = path.join(root, 'agentrepo.json'); if (!isRealFile(cfg))
     issues.push('agentrepo.json missing');
 else {
@@ -289,7 +381,7 @@ else {
     catch (e) {
         issues.push('invalid agentrepo.json: ' + e.message);
     }
-} return { ok: issues.length === 0, issues }; }
+} return { ok:issues.length===0, scope:'command-configuration', readiness:'NOT_VERIFIED', issues }; }
 function map(root, write = false, check = false) { const f = path.join(root, 'docs/architecture.md'); if (!isRealFile(f))
     return { ok: false, problem: 'docs/architecture.md is missing' }; const old = text(f), start = '<!-- agentrepo:map:start -->', end = '<!-- agentrepo:map:end -->'; const a = old.indexOf(start), b = old.indexOf(end); if (a < 0 || b < 0 || b < a)
     return { ok: true, status: 'SKIP', problem: 'Architecture document is project-owned; no managed map markers' }; const expected = archBlock(root), actual = old.slice(a, b + end.length); if (check)
@@ -318,14 +410,46 @@ function execute(root, which, { jsonOutput = false } = {}) {
     }
     return { ok: out.length === steps.length && out.every(x => x.status === 'PASS'), status: out.every(x => x.status === 'PASS') ? 'PASS' : 'FAIL', command: which, checks: out };
 }
-function locate(root, terms, limit = 5) { const ts = terms.toLowerCase().split(/\W+/).filter(Boolean); const scored = walk(root).map(f => { const s = f.toLowerCase(); let score = ts.reduce((acc, t) => acc + (s.includes(t) ? 1 + (s.split('/').at(-1).includes(t) ? 2 : 0) : 0), 0); return { path: f, score }; }).filter(x => x.score > 0).sort((a, b) => b.score - a.score || a.path.localeCompare(b.path)); return scored.slice(0, limit); }
+function locate(root, terms, limit=5) {
+    const tokens=String(terms).toLowerCase().match(/[\p{L}\p{N}_]+/gu)||[];
+    if(!tokens.length) return [];
+    const query=tokens.join(' '), results=[];
+    for(const file of walk(root)) {
+        if(file.startsWith('bin/') && isRealFile(path.join(root,'src',path.posix.basename(file))) &&
+            readSource(root,file)?.includes('const PROJECT_TEMPLATES = Object.freeze(')) continue; // The maintained source is in src/.
+        const pathName=file.toLowerCase();
+        const pathScore=tokens.reduce((sum,t)=>sum+(pathName.includes(t)?3+(pathName.split('/').at(-1).includes(t)?3:0):0),0);
+        let best=null;
+        if(readableSourceFile(file)) {
+            const body=readSource(root,file);
+            if(body!==null) {
+                const lines=body.split(/\r?\n/);
+                for(let i=0;i<lines.length;i++) {
+                    if(lines[i].length>500) continue; // Skip generated and minified lines that drown useful results.
+                    const lower=lines[i].toLowerCase();
+                    const hits=tokens.filter(t=>lower.includes(t));
+                    if(!hits.length) continue;
+                    const score=hits.length*4+(hits.length===tokens.length?8:0)+(lower.includes(query)?6:0);
+                    if(!best || score>best.score) {
+                        const snippet=lines[i].trim();
+                        // Secret-looking lines still contribute to location but must not reveal values.
+                        const sensitive=/(?:password|secret|token|api[_-]?key|private[_-]?key)\s*[:=]/i.test(snippet);
+                        best={score,line:i+1,snippet:sensitive?'[REDACTED: inspect locally]':snippet.slice(0,180)};
+                    }
+                }
+            }
+        }
+        if(pathScore||best) results.push({path:file,score:pathScore+(best?.score||0),match:best?'content':'path',...(best?{line:best.line,snippet:best.snippet}:{})});
+    }
+    return results.sort((a,b)=>b.score-a.score||a.path.localeCompare(b.path)).slice(0,Math.max(1,Math.min(30,limit)));
+}
 function output(o, asJson) { if (asJson)
     process.stdout.write(JSON.stringify(o, null, 2) + '\n');
 else if (typeof o === 'string')
     process.stdout.write(o + '\n');
 else
     process.stdout.write(JSON.stringify(o, null, 2) + '\n'); }
-const HELP = `AgentRepo Kit ${VERSION}\n\nUsage: agentrepo <inspect|init|adopt|github|doctor|map|locate|setup|dev|test|verify> [path]\n\n  inspect [path]      Read-only detection of project commands and existing rules\n  init [path]         Add only missing essentials; no install scripts run\n  init [path] --dry-run  Preview additions\n  adopt [path]        Same as read-only inspect for an existing project\n  adopt [path] --apply   Add missing files, preserving all existing files\n  github [path]       Preview optional GitHub Issue, PR and changelog templates\n  github [path] --apply  Add missing GitHub templates only\n  github [path] --apply --workflow  Add CI only when compatible and explicitly requested\n  doctor [path]       Check the verification command is configured\n  map [path] --check  Detect stale auto-generated map\n  map [path] --write  Refresh only the managed map section\n  locate <keywords>   Find candidate file paths\n  setup|dev|test|verify  Run configured argv; detect native commands before init\n\n  --json              JSON output for most commands\n`;
+const HELP = `AgentRepo Kit ${VERSION}\n\nUsage: agentrepo <inspect|init|adopt|github|doctor|map|locate|setup|dev|test|verify> [path]\n\n  inspect [path]      Read-only detection of project commands and existing rules\n  init [path]         Add only missing essentials; no install scripts run\n  init [path] --dry-run  Preview additions\n  adopt [path]        Same as read-only inspect for an existing project\n  adopt [path] --apply   Add missing files, preserving all existing files\n  github [path]       Preview optional GitHub Issue, PR and changelog templates\n  github [path] --apply  Add missing GitHub templates only\n  github [path] --apply --integrations  Include a broken skill/integration form\n  github [path] --apply --workflow  Add CI only when compatible and explicitly requested\n  doctor [path]       Check the verification command is configured\n  map [path] --check  Detect stale auto-generated map\n  map [path] --write  Refresh only the managed map section\n  locate <keywords>   Find candidate file paths\n  setup|dev|test|verify  Run configured argv; detect native commands before init\n\n  --json              JSON output for most commands\n`;
 function defaultWorkingDirectory() {
     return path.basename(path.dirname(SELF)) === ".agentrepo" ? path.dirname(path.dirname(SELF)) : process.cwd();
 }
@@ -355,7 +479,7 @@ export function main(argv = process.argv.slice(2), cwd = defaultWorkingDirectory
                 result = args.includes('--apply') ? init(where, false) : inspect(where);
                 break;
             case 'github':
-                result = githubInit(where,args.includes('--apply'),args.includes('--workflow'));
+                result = githubInit(where,args.includes('--apply'),args.includes('--workflow'),args.includes('--integrations'));
                 break;
             case 'doctor':
                 result = doctor(where);

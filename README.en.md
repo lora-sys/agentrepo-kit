@@ -11,7 +11,7 @@ node bin/agentrepo.mjs init /path/to/project --dry-run
 node bin/agentrepo.mjs init /path/to/project
 ```
 
-`inspect` reads existing rules and detects the native toolchain. `verify` can run detected native tests even before initialization. `init` installs only missing files, never overwrites project-owned instructions or CI, and never runs setup scripts.
+`inspect` reads existing rules and detects the native toolchain. Detected commands remain `DETECTED_UNVERIFIED` until executed. `verify` can run detected native tests even before initialization. `init` installs only missing files, never overwrites project-owned instructions or CI, and never runs setup scripts.
 
 After initialization:
 
@@ -38,6 +38,10 @@ The first command is read-only. The second adds missing files. Existing README, 
 
 A short `AGENTS.md`, one-page `docs/architecture.md`, `docs/development.md`, `agentrepo.json`, and a standalone `.agentrepo/cli.mjs`. README, `.env.example`, and `.gitignore` are created only as needed. No HTML diagrams, project-level evaluation framework, or new CI workflows are installed by default.
 
+## Source evidence
+
+`node .agentrepo/cli.mjs locate "duplicate email"` searches filenames and source text, returning the matching line. `docs/architecture.md` records configured entrypoints, resolvable static import references and test references with source locations. This is a partial static index, not a complete call graph.
+
 ## Development
 
 ```sh
@@ -55,4 +59,4 @@ No global skills or external agent modes are required. The generated `AGENTS.md`
 
 ## Optional GitHub collaboration templates
 
-No npm installation is required. Follow [the standalone setup Skill](skills/agentrepo-setup/SKILL.md) and edit [GitHub Issue Forms and PR templates](templates/github/). Or run `node bin/agentrepo.mjs github /path/to/repo` to preview and add `--apply` to install only missing templates. CI requires separate `--workflow` approval and existing executable setup/verify commands.
+No npm installation is required. Follow the optional [GitHub Skill](skills/agentrepo-github/SKILL.md) and edit [GitHub Issue Forms and PR templates](templates/github/). Or run `node bin/agentrepo.mjs github /path/to/repo` to preview and add `--apply` to install only missing templates. CI requires separate `--workflow` approval and existing executable setup/verify commands.
